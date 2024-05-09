@@ -1,14 +1,7 @@
 
-#clear all variables
-#from IPython import get_ipython
-#get_ipython().magic('reset -sf')
-
-#close all figures
-#from IPython.display import clear_output
-#clear_output()
 
 #%%
-
+print('Importing Libraries')
 import matplotlib.pyplot
 import xarray
 import numpy
@@ -31,12 +24,13 @@ from netCDF4 import num2date
 import cftime
 
 #%%
-print('starting')
+print('Opening File')
 
 path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/NetCDF'
 sub_path ='/IPSL_CM6/'
 file = 'TR6AV-Sr02_20000101_79991231_1M_precip.nc'
-
+#sub_path = '/MPI_ESM/'
+#file = 'pr_Amon_MPI_ESM_TRSF_slo0043_100101_885012.nc'
 
 filename = path + sub_path + file
 
@@ -50,21 +44,24 @@ dataset = xarray.open_dataset(filename,decode_times=False)
 
 
 #%%
+print('Initial Data Tweaks')
 time_var = dataset.time
 # Convert the time values to dates
 dates = num2date(time_var[:], units=time_var.units, calendar=time_var.calendar)
+#dates = num2date((time_var[:]) * 3153.6, units='seconds since 2000-01-01 00:00:00', calendar=time_var.calendar)
+
 # Convert the dates to a format that xarray can understand
 dates_xarray = [cftime.DatetimeNoLeap(date.year - 6000, date.month, date.day) for date in dates]
 # Update the time variable in the dataset
 dataset['time'] = dates_xarray
 
 
-
+#%%
 #Change this variable to the variable you want to plot
 data_hist = dataset.precip 
+#data_hist = dataset.pr
 
-
-#take only the first 100 time steps for testing purposes, to make it run quicker
+#Select time slice
 data_hist = data_hist[0:6000,:,:]
 
 weights = data_hist[0,:,:]
@@ -93,6 +90,9 @@ plt.show()
 #%%
 
 #Plot just for the NWS region
+
+####NEED TO REFINE THIS CODE AS IT TAKES weights AND THEN APPLIES MASK
+#SO WEIGHTS COS LAT WEIGHTS ARE ALREADY APPLIED
 
 regionmask.defined_regions.ar6.all.plot(text_kws=dict(color="#67000d", fontsize=7, bbox=dict(pad=0.2, color="w")))
 regionmask.defined_regions.ar6.all

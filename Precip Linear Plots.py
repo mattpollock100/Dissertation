@@ -24,6 +24,8 @@ import cftime
 #%%
 print('Setup Variables')
 
+
+
 IPSL_CM6_Precip = {'sub_path' : '/IPSL_CM6/', 
                    'file' : 'TR6AV-Sr02_20000101_79991231_1M_precip.nc', 
                    'variable_name' : 'precip',
@@ -31,9 +33,17 @@ IPSL_CM6_Precip = {'sub_path' : '/IPSL_CM6/',
                    'y_min' : 0,
                    'y_max' : 10}
 
-all_models = {'IPSL_CM6_Precip' : IPSL_CM6_Precip}
+IPSL_CM6_Temp = {'sub_path' : '/IPSL_CM6/', 
+                 'file' : 'TR6AV-Sr02_20000101_79991231_1M_t2m.nc', 
+                 'variable_name' : 'tas',
+                 'conversion_factor' : 1,
+                 'y_min' : 295,
+                 'y_max' : 300}
 
-model_to_use = 'IPSL_CM6_Precip'
+all_models = {'IPSL_CM6_Precip' : IPSL_CM6_Precip,
+              'IPSL_CM6_Temp': IPSL_CM6_Temp}
+
+model_to_use = 'IPSL_CM6_Temp'
 
 sub_path = all_models[model_to_use]['sub_path']
 file = all_models[model_to_use]['file']
@@ -42,20 +52,19 @@ conversion_factor = all_models[model_to_use]['conversion_factor']
 y_min = all_models[model_to_use]['y_min']
 y_max = all_models[model_to_use]['y_max']
 
+chunk_years = 500
+region_number = 9
+roll_avg_years = 1
+
+season = "DJF"
 
 #%%
 print('Opening File')
 
 path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/NetCDF'
-sub_path ='/IPSL_CM6/'
-#file = 'TR6AV-Sr02_20000101_79991231_1M_precip.nc'
-file = 'TR6AV-Sr02_20000101_79991231_1M_t2m.nc'
-#sub_path = '/MPI_ESM/'
-#file = 'pr_Amon_MPI_ESM_TRSF_slo0043_100101_885012.nc'
 
 filename = path + sub_path + file
 
-conversion_factor = 1 #for precipitation data in kg m-2 s-1 to mm/day
 convert_dates = True
 
 dataset = xarray.open_dataset(filename,decode_times=False)
@@ -77,9 +86,8 @@ if convert_dates:
 print('Create weights for region')
 
 #Change this variable to the variable you want to plot
-data_hist = dataset.tas
-#data_hist = dataset.precip 
-#data_hist = dataset.pr
+data_hist = dataset[variable_name]
+
 
 weights = data_hist[0,:,:]
 weights = numpy.cos(numpy.deg2rad(dataset.lat))
@@ -89,9 +97,7 @@ weights.name = "weights"
 #regionmask.defined_regions.ar6.all
 
 mask = regionmask.defined_regions.ar6.all.mask(data_hist)
-region_weights=weights.where(mask == 9 ,0)
-
-#region_hist = data_hist.weighted(region_weights).mean(("lat","lon")) 
+region_weights=weights.where(mask == region_number ,0)
 
 
 #%%
@@ -100,29 +106,30 @@ def line_plot_precip(data, title):
     fig, ax = plt.subplots(figsize=(15,4))
     data.plot(ax=ax, label = 'Region', color = 'cornflowerblue')
     plt.title(title)
-    plt.ylim(295, 300)
+    plt.ylim(y_min, y_max)
     plt.show
 
 #%%
 print('Select time slices and plot')
-season = "DJF"
-#Loop through time in chunks of 500 yrs
+
+#Loop through time in chunks 
 max_time = data_hist.time.shape[0]
-chunk_size = 500 * 12
+chunk_size = chunk_years * 12
+output = []
 for i in range(0,max_time,chunk_size):
     print(f"Slicing {i}")
     data_slice = data_hist[i:i+chunk_size,:,:]
     
     #region_slice_mean = region_slice.where(data_slice.time.dt.season == "JJA").dropna(dim='time').mean(dim='time') * conversion_factor
     region_slice_mean = data_slice.where(data_slice.time.dt.season == season).dropna(dim='time').weighted(region_weights).mean(("lat","lon"))  * conversion_factor
-    average = region_slice_mean.mean().values
-    variance = region_slice_mean.var().values
+    average = region_slice_mean.mean().values.item()
+    variance = region_slice_mean.var().values.item()
     
     #create a running average 
     #N.B. Remember if a season is selected there will be less than 12m in a year 
-    region_slice_rolling = region_slice_mean.rolling(time= 1 * 3, center = True).mean()
+    region_slice_rolling = region_slice_mean.rolling(time= roll_avg_years * 3, center = True).mean()
     title = f"{season} Average temperature: {average}, Variance of temperature: {variance}"
-    line_plot_precip(region_slice_rolling, title)
-
+    #line_plot_precip(region_slice_rolling, title)
+    output.append((i/12,average,variance))
 
 # %%

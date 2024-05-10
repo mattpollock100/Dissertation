@@ -24,6 +24,14 @@ import cftime
 #%%
 print('Setup Variables')
 
+model_to_use = 'IPSL_CM5_Precip'
+
+chunk_years = 500
+region_number = 9
+roll_avg_years = 1
+
+season = "DJF"
+months_in_year = 3
 
 
 IPSL_CM6_Precip = {'sub_path' : '/IPSL_CM6/', 
@@ -32,7 +40,7 @@ IPSL_CM6_Precip = {'sub_path' : '/IPSL_CM6/',
                    'conversion_factor' : 86400,
                    'y_min' : 0,
                    'y_max' : 10,
-                   'convert_dates' : 1}
+                   'convert_dates' : 2}
 
 IPSL_CM6_Temp = {'sub_path' : '/IPSL_CM6/', 
                  'file' : 'TR6AV-Sr02_20000101_79991231_1M_t2m.nc', 
@@ -40,8 +48,9 @@ IPSL_CM6_Temp = {'sub_path' : '/IPSL_CM6/',
                  'conversion_factor' : 1,
                  'y_min' : 295,
                  'y_max' : 300,
-                 'convert_dates' : 1}
+                 'convert_dates' : 2}
 
+#https://www.nature.com/articles/s41467-020-18478-6#Sec13
 MPI_ESM_Precip = {'sub_path' : '/MPI_ESM/',
                   'file' : 'pr_Amon_MPI_ESM_TRSF_slo0043_100101_885012.nc',
                   'variable_name' : 'pr',
@@ -50,11 +59,20 @@ MPI_ESM_Precip = {'sub_path' : '/MPI_ESM/',
                   'y_max' : 10,
                   'convert_dates' : 2}
 
+IPSL_CM5_Precip = {'sub_path' : '/IPSL_CM5/',
+                   'file' : 'pr_Amon_TR5AS_combined.nc',
+                    'variable_name' : 'pr',
+                    'conversion_factor' : 86400,
+                    'y_min' : 0,
+                    'y_max' : 10,
+                    'convert_dates' : 2}
+
 all_models = {'IPSL_CM6_Precip' : IPSL_CM6_Precip,
               'IPSL_CM6_Temp': IPSL_CM6_Temp,
-              'MPI_ESM_Precip' : MPI_ESM_Precip}
+              'MPI_ESM_Precip' : MPI_ESM_Precip,
+              'IPSL_CM5_Precip' : IPSL_CM5_Precip}
 
-model_to_use = 'MPI_ESM_Precip'
+
 
 sub_path = all_models[model_to_use]['sub_path']
 file = all_models[model_to_use]['file']
@@ -64,11 +82,7 @@ y_min = all_models[model_to_use]['y_min']
 y_max = all_models[model_to_use]['y_max']
 convert_dates = all_models[model_to_use]['convert_dates']
 
-chunk_years = 500
-region_number = 9
-roll_avg_years = 1
 
-season = "DJF"
 
 #IPSL ends in 1990
 #
@@ -76,6 +90,7 @@ season = "DJF"
 print('Opening File')
 
 path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/NetCDF'
+plot_path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Plots/'
 
 filename = path + sub_path + file
 
@@ -152,10 +167,39 @@ for i in range(0,max_time,chunk_size):
     
     #create a running average 
     #N.B. Remember if a season is selected there will be less than 12m in a year 
-    region_slice_rolling = region_slice_mean.rolling(time= roll_avg_years * 3, center = True).mean()
+    region_slice_rolling = region_slice_mean.rolling(time= roll_avg_years * months_in_year, center = True).mean()
     title = f"{season} Average temperature: {average}, Variance of temperature: {variance}"
     line_plot_precip(region_slice_rolling, title)
     output.append((int(i/12),round(average,2),round(variance,4)))
 
 print(output)
+# %%
+#Plot statistics
+x = [(t[0] + chunk_years / 2 ) for t in output]
+y_1 = [t[1] for t in output]
+y_2 = [t[2] for t in output]
+
+fig, ax1 = plt.subplots()
+
+# Plot the first variable on the first y-axis
+ax1.plot(x, y_1, 'b-')
+ax1.set_xlabel('Model Years')
+ax1.set_ylabel('Mean', color='b')
+ax1.tick_params('y', colors='b')
+
+# Create a second y-axis that shares the same x-axis
+ax2 = ax1.twinx()
+
+# Plot the second variable on the second y-axis
+ax2.plot(x, y_2, 'r-')
+ax2.set_ylabel('Variance', color='r')
+ax2.tick_params('y', colors='r')
+
+plt.title(f"Model: {sub_path.replace("/","")} Variable: {variable_name} Season: {season}")
+
+plot_file_name = sub_path.replace("/","") + "_" + variable_name + "_" + season + ".png"
+
+
+plt.savefig(plot_path + plot_file_name)
+
 # %%

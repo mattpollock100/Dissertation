@@ -30,9 +30,7 @@ chunk_years = 500
 region_number = 9
 roll_avg_years = 1
 
-season = "DJF"
-months_in_year = 3
-
+seasons = ['Annual', 'DJF', 'MAM', 'JJA', 'SON']
 
 IPSL_CM6_Precip = {'sub_path' : '/IPSL_CM6/', 
                    'file' : 'TR6AV-Sr02_20000101_79991231_1M_precip.nc', 
@@ -152,54 +150,63 @@ def line_plot_precip(data, title):
 #%%
 print('Select time slices and plot')
 
-#Loop through time in chunks 
-max_time = data_hist.time.shape[0]
-chunk_size = chunk_years * 12
-output = []
-for i in range(0,max_time,chunk_size):
-    print(f"Slicing {i}")
-    data_slice = data_hist[i:i+chunk_size,:,:]
-    
-    #region_slice_mean = region_slice.where(data_slice.time.dt.season == "JJA").dropna(dim='time').mean(dim='time') * conversion_factor
-    region_slice_mean = data_slice.where(data_slice.time.dt.season == season).dropna(dim='time').weighted(region_weights).mean(("lat","lon"))  * conversion_factor
-    average = region_slice_mean.mean().values.item()
-    variance = region_slice_mean.var().values.item()
-    
-    #create a running average 
-    #N.B. Remember if a season is selected there will be less than 12m in a year 
-    region_slice_rolling = region_slice_mean.rolling(time= roll_avg_years * months_in_year, center = True).mean()
-    title = f"{season} Average temperature: {average}, Variance of temperature: {variance}"
-    line_plot_precip(region_slice_rolling, title)
-    output.append((int(i/12),round(average,2),round(variance,4)))
 
-print(output)
-# %%
-#Plot statistics
-x = [(t[0] + chunk_years / 2 ) for t in output]
-y_1 = [t[1] for t in output]
-y_2 = [t[2] for t in output]
+for season in seasons:
+    months_in_year = 3
 
-fig, ax1 = plt.subplots()
+    if season == 'Annual': months_in_year = 12
 
-# Plot the first variable on the first y-axis
-ax1.plot(x, y_1, 'b-')
-ax1.set_xlabel('Model Years')
-ax1.set_ylabel('Mean', color='b')
-ax1.tick_params('y', colors='b')
-
-# Create a second y-axis that shares the same x-axis
-ax2 = ax1.twinx()
-
-# Plot the second variable on the second y-axis
-ax2.plot(x, y_2, 'r-')
-ax2.set_ylabel('Variance', color='r')
-ax2.tick_params('y', colors='r')
-
-plt.title(f"Model: {sub_path.replace("/","")} Variable: {variable_name} Season: {season}")
-
-plot_file_name = sub_path.replace("/","") + "_" + variable_name + "_" + season + ".png"
+    #Loop through time in chunks 
+    max_time = data_hist.time.shape[0]
+    chunk_size = chunk_years * 12
+    output = []
+    for i in range(0,max_time,chunk_size):
+        print(f"Slicing {i}")
+        data_slice = data_hist[i:i+chunk_size,:,:]
+        
+        #region_slice_mean = region_slice.where(data_slice.time.dt.season == "JJA").dropna(dim='time').mean(dim='time') * conversion_factor
+        if season == 'Annual':
+            region_slice_mean = data_slice.weighted(region_weights).mean(("lat","lon"))  * conversion_factor
+        else:    
+            region_slice_mean = data_slice.where(data_slice.time.dt.season == season).dropna(dim='time').weighted(region_weights).mean(("lat","lon"))  * conversion_factor
+        
+        average = region_slice_mean.mean().values.item()
+        variance = region_slice_mean.var().values.item()
+        
+        #create a running average 
+        #N.B. Remember if a season is selected there will be less than 12m in a year 
+        region_slice_rolling = region_slice_mean.rolling(time= roll_avg_years * months_in_year, center = True).mean()
+        title = f"{season} Average temperature: {average}, Variance of temperature: {variance}"
+        #line_plot_precip(region_slice_rolling, title)
+        output.append((int(i/12),round(average,2),round(variance,4)))
 
 
-plt.savefig(plot_path + plot_file_name)
+    #Plot statistics
+    x = [(t[0] + chunk_years / 2 ) for t in output]
+    y_1 = [t[1] for t in output]
+    y_2 = [t[2] for t in output]
+
+    fig, ax1 = plt.subplots()
+
+    # Plot the first variable on the first y-axis
+    ax1.plot(x, y_1, 'b-')
+    ax1.set_xlabel('Model Years')
+    ax1.set_ylabel('Mean', color='b')
+    ax1.tick_params('y', colors='b')
+
+    # Create a second y-axis that shares the same x-axis
+    ax2 = ax1.twinx()
+
+    # Plot the second variable on the second y-axis
+    ax2.plot(x, y_2, 'r-')
+    ax2.set_ylabel('Variance', color='r')
+    ax2.tick_params('y', colors='r')
+
+    plt.title(f"Model: {sub_path.replace("/","")} Region: {region_number} Variable: {variable_name} Season: {season}")
+
+    plot_file_name = sub_path.replace("/","") + "_" + str(region_number) + "_" + variable_name + "_" + season + ".png"
+
+
+    plt.savefig(plot_path + plot_file_name)
 
 # %%

@@ -26,18 +26,23 @@ import cftime
 #Define Files
 path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/NetCDF'
 sub_path = '/IPSL_CM5/'
+variables = ['psl', 'tas', 'ts']
 
-file_names = ['pr_Amon_TR5AS-Vlr01_200001_299912.nc', 
-              'pr_Amon_TR5AS-Vlr01_300001_399912.nc',
-              'pr_Amon_TR5AS-Vlr01_400001_499912.nc',
-              'pr_Amon_TR5AS-Vlr01_500001_599912.nc',
-              'pr_Amon_TR5AS-Vlr01_600001_699912.nc',
-              'pr_Amon_TR5AS-Vlr01_700001_799912.nc']
-
+file_names = ['_Amon_TR5AS-Vlr01_200001_299912.nc', 
+              '_Amon_TR5AS-Vlr01_300001_399912.nc',
+              '_Amon_TR5AS-Vlr01_400001_499912.nc',
+              '_Amon_TR5AS-Vlr01_500001_599912.nc',
+              '_Amon_TR5AS-Vlr01_600001_699912.nc',
+              '_Amon_TR5AS-Vlr01_700001_799912.nc']
 
 # %%
+for var in variables:
+    file_paths = [path + sub_path + var + file for file in file_names]
 
-file_paths = [path + sub_path + file for file in file_names]
-ds = xarray.open_mfdataset(file_paths, combine = 'by_coords')
-ds.to_netcdf('pr_Amon_TR5AS-Vlr01_200001_799912.nc')
-# %%
+    dss = [xarray.open_dataset(file_path) for file_path in file_paths]
+
+    ds_combined = xarray.concat(dss, dim = 'time')
+
+
+    ds_combined.to_netcdf(path + sub_path + var + '_Amon_TR5AS_combined.nc')
+    # %%

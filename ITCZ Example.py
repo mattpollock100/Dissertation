@@ -34,32 +34,37 @@ from netCDF4 import num2date
 import cftime
 
 #%%
+from ModelParams import *
+
+model = IPSL_CM5_Precip #IPSL_CM5_Precip, MPI_ESM_Precip, IPSL_CM6_Precip
+
+#%%
 print('Opening File')
 
 path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/NetCDF'
-#sub_path ='/IPSL_CM6/'
-#file = 'TR6AV-Sr02_20000101_79991231_1M_precip.nc'
+plot_path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Plots/'
 
-sub_path = '/MPI_ESM/'
-file = 'pr_Amon_MPI_ESM_TRSF_slo0043_100101_885012.nc'
+
+sub_path = model['sub_path']
+file = model['file']
+variable_name = model['variable_name']
+conversion_factor = model['conversion_factor']
+model_end_year = model['model_end_year']
 
 filename = path + sub_path + file
 
-variable_name = 'pr' #'precip'
+model_name = sub_path.replace('/', '')
 
-initial_lon_coords = [-80, -70] 
+initial_lon_coords = [-90, -80] 
 #Nino1+2: 90W-80W
 #Peru (roughly): 80W-70W
 
+lon_string = str(abs(initial_lon_coords[0])) + 'W' + '-' + str(abs(initial_lon_coords[1])) + 'W'
 
 lat_coords = [15, -15]
-
-model_end_year = 1990
-
-conversion_factor = 86400 #for precipitation data in kg m-2 s-1 to mm/day
+lat_string = str(lat_coords[0]) + 'N' + '-' + str(abs(lat_coords[1])) + 'S'
 
 chunk_years= 500
-
 
 seasons = ['Annual', 'DJF', 'MAM', 'JJA', 'SON']
 
@@ -116,12 +121,17 @@ for season in seasons:
         year = int(i/12 + chunk_years / 2)
         
         color = cmap(i / periods)
-        ax.plot(latitudes, values, label=f"Time: {year} C of M: {round(centre_of_mass, 2)}", color=color)
+        ax.plot(latitudes, values, label=f"Time: {year} CofM: {round(centre_of_mass, 2)}", color=color)
 
-    ax.set_title(season)
+    title = f"{model_name} {season} {lat_string} {lon_string}"
+    ax.set_title(title)
     ax.set_xlabel('Latitude')
     ax.set_ylabel('Precipitation')
     ax.legend(bbox_to_anchor=(0.5, -0.1), loc='upper center')
+    
+
+    plot_file_name = title + '.png'
+    plt.savefig(plot_path + plot_file_name, bbox_inches='tight')
     plt.show()
     plt.close()
 

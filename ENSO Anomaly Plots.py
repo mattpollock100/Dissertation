@@ -27,35 +27,12 @@ import cftime
 #Open file
 path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/NetCDF'
 plot_path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Plots/'
-MPI_ESM_SST =   {'sub_path' : '/MPI_ESM/',
-                'file' : 'sst_Amon_MPI_ESM_TRSF_slo0043_100101_885012.nc', 
-                'variable_name' : 'sst',
-                'coords_34' : [190, 240],
-                'coords_12' : [270, 280],
-                'model_end_year' : 1850}
 
-IPSL_CM5_TAS =   {'sub_path' : '/IPSL_CM5/',
-                'file' : 'tas_Amon_TR5AS_combined.nc', 
-                'variable_name' : 'tas',
-                'coords_34' : [-170, -40],
-                'coords_12' : [-90, -80],
-                'model_end_year' : 1990}
+from ModelParams import *
 
-IPSL_CM6_TAS =   {'sub_path' : '/IPSL_CM6/',
-                'file' : 'TR6AV-Sr02_20000101_79991231_1M_t2m.nc', 
-                'variable_name' : 'tas',
-                'coords_34' : [-170, -40],
-                'coords_12' : [-90, -80],
-                'model_end_year' : 1990}
+from CommonFunctions import find_enso_events, convert_dates
 
-model_to_use = MPI_ESM_SST
-
-sub_path = model_to_use['sub_path']
-file = model_to_use['file']
-variable_name = model_to_use['variable_name']
-coords_34 = model_to_use['coords_34']
-coords_12 = model_to_use['coords_12']
-model_end_year = model_to_use['model_end_year']
+all_models = [MPI_ESM_SST, IPSL_CM5_Temp, IPSL_CM6_Temp]
 
 
 chunk_years= 500
@@ -64,106 +41,16 @@ climatology_years = 50
 threshold_34 = 0.5
 threshold_12 = 0.5
 
-months_threshold_34 = 6
-months_threshold_12 = 6
-
-dataset = xarray.open_dataset(path + sub_path + file)
+months_threshold_34 = 6 #12 to compare to extended ENSOs
+months_threshold_12 = 6 
 
 
-#%%
-# Convert the time values to dates
-date_size = dataset.time.shape[0]
-start_year = (model_end_year - (date_size / 12))
-periods = date_size
-dates_xarray = [cftime.DatetimeProlepticGregorian(year=start_year + i // 12, month=i % 12 + 1, day=1) for i in range(periods)]
-dataset['time'] = dates_xarray
-
+coords_34 = [190, 240]
+coords_12 = [270, 280]
 
 #%%
-# Define a function to find the number of ENSO events in a dataset
-def find_enso_events(data, threshold, months_threshold):
-    # Create a boolean array where True indicates that the anomaly is above 0.5
-    above_threshold = data > threshold
-
-    # Label contiguous True regions
-    labeled_array, num_features = ndimage.label(above_threshold)
-
-    # Count the size of each labeled region
-    region_sizes = np.bincount(labeled_array.ravel())
-
-    # Count the number of regions that have a size of 6 or more
-    num_large_regions = np.count_nonzero(region_sizes >= months_threshold)
-
-    avg_anomalies = []
-    lengths = []
-
-    for i in range(1, num_features + 1):
-        # Get the size of the region
-        size = np.count_nonzero(labeled_array == i)
-
-        # If the size is greater than or equal to months_threshold
-        if size >= months_threshold:
-            # Append the size to lengths
-            lengths.append(size)
-
-            # Calculate the average anomaly in the region and append it to avg_anomalies
-            avg_anomaly = data[labeled_array == i].mean()
-            avg_anomalies.append(avg_anomaly)
-
-    return [num_large_regions, round(np.mean(avg_anomalies),3), round(np.mean(lengths),1)]
-    
-    
-#%%
-
-#STILL NEED TO WEIGHT IT??
-
-#NEED TO CHANGE THE VARIABLE NAME FOR EACH DATA SET
-data_hist = dataset[variable_name]
-
-#Loop through time in chunks 
-max_time = data_hist.time.shape[0]
-chunk_size = chunk_years * 12
-output_34 = []
-output_12 = []
-
-for i in range(0,max_time,chunk_size):
-    print(f"Slicing {i}")
-    data_slice = data_hist[i:i+chunk_size,:,:]
-    
-    #NEED TO DOUBLE CHECK THE ACTUAL DEFINITION OF THE ENSO REGIONS
-    nino_34 = data_slice.sel(lat=slice(5, -5), lon=slice(coords_34[0], coords_34[1]))  
-    nino_12 = data_slice.sel(lat=slice(0, -10), lon=slice(coords_12[0], coords_12[1]))
-
-    climatology_34 = nino_34.groupby('time.month').apply(
-        lambda x: x.rolling(time=window_size, center=True, min_periods=1).mean())
-
-    climatology_12 = nino_12.groupby('time.month').apply(
-        lambda x: x.rolling(time=window_size, center=True, min_periods=1).mean())
-
-    anomalies_34 = nino_34 - climatology_34
-    anomalies_12 = nino_12 - climatology_12
-
-    anomalies_mean_34 = anomalies_34.mean(['lat', 'lon'])
-    anomalies_mean_34.plot()
-    plt.title('ENSO 3.4 SST Anomalies')
-    plt.ylabel('Temperature Anomaly (°C)')
-    plt.show()
-
-    anomalies_mean_12 = anomalies_12.mean(['lat', 'lon'])
-    anomalies_mean_12.plot()
-    plt.title('ENSO 1+2 SST Anomalies')
-    plt.ylabel('Temperature Anomaly (°C)')
-    plt.show()
-
-    count_34 = find_enso_events(anomalies_mean_34.dropna('time'), threshold_34, months_threshold_34)
-    count_12 = find_enso_events(anomalies_mean_12.dropna('time'), threshold_12, months_threshold_12)
-
-    output_34.append((int(i/12),count_34))
-    output_12.append((int(i/12),count_12))
-
-#%%
-# Create a figure and a set of subplots
-def plot_anomaly_stats(output, title):
+# Define a function to plot statistics
+def plot_enso_anomaly_stats(output, title):
     fig, ax1 = plt.subplots()
 
     # Plot the first sub-element on the first y-axis
@@ -191,13 +78,79 @@ def plot_anomaly_stats(output, title):
     fig.tight_layout()
     plt.title(title)
     plot_file_name = title + '.png'
-    plt.savefig(plot_path + plot_file_name)
+    #plt.savefig(plot_path + plot_file_name)
     plt.show()
 
-# %%
+#%%
 
-plot_anomaly_stats(output_34, sub_path.replace('/','') + ' ENSO 3.4 Anomaly Stats')
-plot_anomaly_stats(output_12, sub_path.replace('/','') + ' ENSO 1+2 Anomaly Stats')
+for model_to_use in all_models:
+
+    sub_path = model_to_use['sub_path']
+    file = model_to_use['file']
+    variable_name = model_to_use['variable_name']
+    model_end_year = model_to_use['model_end_year']
+
+    # Convert the time values to dates
+
+    dataset = xarray.open_dataset(path + sub_path + file)
+
+    dataset, periods = convert_dates(dataset, model_end_year)
+
+    data_hist = dataset[variable_name]
+
+    #Convert lon coords to -180 -to +180 if required
+    if data_hist.lon.min() < 0:
+        coords_34 = [coord - 360 for coord in coords_34]
+        coords_12 = [coord - 360 for coord in coords_12]
+
+    #Loop through time in chunks 
+    max_time = data_hist.time.shape[0]
+    chunk_size = chunk_years * 12
+    output_34 = []
+    output_12 = []
+
+    window_size = climatology_years * 12
+    
+    for i in range(0,max_time,chunk_size):
+        print(f"Slicing {i}")
+        data_slice = data_hist[i:i+chunk_size,:,:]
+        
+        #NEED TO DOUBLE CHECK THE ACTUAL DEFINITION OF THE ENSO REGIONS
+        nino_34 = data_slice.sel(lat=slice(5, -5), lon=slice(coords_34[0], coords_34[1]))  
+        nino_12 = data_slice.sel(lat=slice(0, -10), lon=slice(coords_12[0], coords_12[1]))
+
+        climatology_34 = nino_34.groupby('time.month').apply(
+            lambda x: x.rolling(time=window_size, center=True, min_periods=1).mean())
+
+        climatology_12 = nino_12.groupby('time.month').apply(
+            lambda x: x.rolling(time=window_size, center=True, min_periods=1).mean())
+
+        anomalies_34 = nino_34 - climatology_34
+        anomalies_12 = nino_12 - climatology_12
+
+        anomalies_mean_34 = anomalies_34.mean(['lat', 'lon'])
+        anomalies_mean_34.plot()
+        plt.title('ENSO 3.4 SST Anomalies')
+        plt.ylabel('Temperature Anomaly (°C)')
+        plt.show()
+
+        anomalies_mean_12 = anomalies_12.mean(['lat', 'lon'])
+        anomalies_mean_12.plot()
+        plt.title('ENSO 1+2 SST Anomalies')
+        plt.ylabel('Temperature Anomaly (°C)')
+        plt.show()
+
+        count_34, mask_34 = find_enso_events(anomalies_mean_34.dropna('time'), threshold_34, months_threshold_34)
+        count_12, mask_12 = find_enso_events(anomalies_mean_12.dropna('time'), threshold_12, months_threshold_12)
+
+        output_34.append((int(i/12),count_34))
+        output_12.append((int(i/12),count_12))
+
+
+
+
+    plot_enso_anomaly_stats(output_34, sub_path.replace('/','') + ' ENSO 3.4 Anomaly Stats')
+    plot_enso_anomaly_stats(output_12, sub_path.replace('/','') + ' ENSO 1+2 Anomaly Stats')
 
 
 

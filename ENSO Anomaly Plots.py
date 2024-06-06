@@ -25,8 +25,6 @@ import cftime
 
 #%%
 #Open file
-path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/NetCDF'
-plot_path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Plots/'
 
 from ModelParams import *
 

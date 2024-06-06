@@ -1,4 +1,7 @@
 #model params
+path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/NetCDF'
+plot_path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Plots/'
+
 
 IPSL_CM6_Precip = {'sub_path' : '/IPSL_CM6/', 
                 'file' : 'TR6AV-Sr02_20000101_79991231_1M_precip.nc', 

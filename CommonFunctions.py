@@ -45,13 +45,13 @@ def find_enso_events(data, threshold, months_threshold):
             avg_anomalies.append(avg_anomaly)
     
     # Return a boolean of TRUE if in an ENSO, false if not
-    mask = np.zeros_like(above_threshold, dtype=bool)
+    mask_enso = np.zeros_like(above_threshold, dtype=bool)
 
     # Loop over each group of consecutive True values
     for i in range(1, num_features + 1):
         # If the group has 6 or more elements, set them to True in the mask
         if np.sum(labeled_array == i) >= months_threshold:
-            mask[labeled_array == i] = True
+            mask_enso[labeled_array == i] = True
 
-    return [num_large_regions, round(np.mean(avg_anomalies),3), round(np.mean(lengths),1)], mask
+    return [num_large_regions, round(np.mean(avg_anomalies),3), round(np.mean(lengths),1)], mask_enso
  

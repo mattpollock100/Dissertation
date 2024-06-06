@@ -31,8 +31,13 @@ from ModelParams import *
 from CommonFunctions import find_enso_events, convert_dates
 
 
+###This code looks at ENSO anomalies with the climatology removed.
+###It can be used both to produce maps for each time slice of the ENSO anomaly
+
+
 path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/NetCDF'
 plot_path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Plots/'
+mask_path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/ENSO Masks/'
 
 all_model_pairs =  [[MPI_ESM_SST, MPI_ESM_Precip], [MPI_ESM_SST, MPI_ESM_Temp], 
                     [IPSL_CM5_Temp, IPSL_CM5_Temp], [IPSL_CM5_Temp, IPSL_CM5_Precip],
@@ -40,12 +45,12 @@ all_model_pairs =  [[MPI_ESM_SST, MPI_ESM_Precip], [MPI_ESM_SST, MPI_ESM_Temp],
 
 
 #DELETE THIS JUST FOR TESTING
-all_model_pairs = [ [IPSL_CM6_Temp, IPSL_CM6_Precip]]
+all_model_pairs = [[MPI_ESM_SST, MPI_ESM_Temp]]
 
 region_number = 9
 
 chunk_years= 500
-climatology_years = 50
+climatology_years = 500   #####Note this is taking the climatology of the WHOLE slice
 
 threshold_34 = 0.5
 threshold_12 = 0.5
@@ -59,9 +64,35 @@ coords_12 = [270, 280]
 
 roll_avg_years = 1
 
-####NOTE, THIS IS USEFUL TO SEE THE TREND IN ENSO ANOMALIES BUT NOT ABSOLUTE LEVELS
-####THAT's BECAUSE ENSO OCCURS DURING CERTAIN TIMES OF THE YEAR MORE FREQUENTLY, SO WOULD NEED
-####TO REMOVE CLIMATOLOGY
+lat_slice = [5, -35]
+lon_slice = [270, 300]
+
+
+#%%
+#Function to make maps
+print('define function to plot maps')
+def map_plot(data, cmap='BrBG', title = 'Title'):
+    matplotlib.pyplot.figure(figsize=(10,7))
+    proj=cartopy.crs.Robinson(central_longitude=-85)
+    ax = matplotlib.pyplot.subplot(111, projection=proj)
+    ax.set_extent([-90, -60, -35, 5], crs=cartopy.crs.PlateCarree())
+
+    # do the plot
+    data.plot.pcolormesh(ax=ax, transform=cartopy.crs.PlateCarree(), cmap = cmap, cbar_kwargs={'label':'Temp Anomaly $(K)$'})
+    
+    #levels=numpy.linspace(0,15,41), 
+
+    gl = ax.gridlines(crs=cartopy.crs.PlateCarree(), draw_labels=True,
+                      linewidth=1, color='gray', alpha=0.5, linestyle='-',
+                      xlocs=range(-180, 181, 10), ylocs=range(-90, 91, 10))
+
+    gl.top_labels = False
+    gl.right_labels = False
+
+    ax.coastlines()
+    ax.add_feature(cartopy.feature.BORDERS)
+    ax.title.set_text(title)
+    plt.show()
 
 #%%
 for model_pair in all_model_pairs:
@@ -81,6 +112,7 @@ for model_pair in all_model_pairs:
     if enso_data_hist.lon.min() < 0:
         coords_34 = [coord - 360 for coord in coords_34]
         coords_12 = [coord - 360 for coord in coords_12]
+        lon_slice = [coord - 360 for coord in lon_slice]
 
     #Loop through time in chunks 
     max_time = enso_data_hist.time.shape[0]
@@ -88,7 +120,7 @@ for model_pair in all_model_pairs:
     output_34 = []
     output_12 = []
     output = []
-
+    
     window_size = climatology_years * 12
     
     model_to_use= model_pair[1]
@@ -117,47 +149,37 @@ for model_pair in all_model_pairs:
     region_weights=weights.where(mask == region_number ,0)
 
     months_in_year = 12
-
+    
     for i in range(0,max_time,chunk_size):
         print(f"Slicing {i}")
-        enso_data_slice = enso_data_hist[i:i+chunk_size,:,:]
+
+        mask_file_name = mask_path + sub_path.replace("/","") + "_" + str(i) + '_ENSO34_Mask.npy'
+        mask_enso = np.load(mask_file_name)
+        mask_enso_3D = mask_enso[:, None, None]
+
+        #select a broad slice of the region to reduce computational load
+        data_slice_raw = data_hist[i:i+chunk_size,:,:].sel(lat=slice(lat_slice[0], lat_slice[1]), lon=slice(lon_slice[0], lon_slice[1])) 
         
-        nino_34 = enso_data_slice.sel(lat=slice(5, -5), lon=slice(coords_34[0], coords_34[1]))  
-        #nino_12 = enso_data_slice.sel(lat=slice(0, -10), lon=slice(coords_12[0], coords_12[1]))
-
-        climatology_34 = nino_34.groupby('time.month').apply(
+        climatology = data_slice_raw.groupby('time.month').apply(
             lambda x: x.rolling(time=window_size, center=True, min_periods=1).mean())
+       
+        data_slice = data_slice_raw - climatology
 
-        #climatology_12 = nino_12.groupby('time.month').apply(
-        #    lambda x: x.rolling(time=window_size, center=True, min_periods=1).mean())
+        anomalies_enso = data_slice.where(mask_enso_3D).dropna(dim='time').mean('time')
 
-        anomalies_34 = nino_34 - climatology_34
-        #anomalies_12 = nino_12 - climatology_12
+        #map_plot(data = anomalies_enso, cmap = 'bwr', title = str(i) + ' ENSO Anomalies')
 
-        anomalies_mean_34 = anomalies_34.mean(['lat', 'lon'])
-
-        #anomalies_mean_12 = anomalies_12.mean(['lat', 'lon'])
-
-        count_34, mask_34 = find_enso_events(anomalies_mean_34.dropna('time'), threshold_34, months_threshold_34)
-        #count_12, mask_12 = find_enso_events(anomalies_mean_12.dropna('time'), threshold_12, months_threshold_12)
-
-        output_34.append((int(i/12),count_34))
-        #output_12.append((int(i/12),count_12))
-
-
-        data_slice = data_hist[i:i+chunk_size,:,:]
-            
+        
         region_slice_mean = data_slice.weighted(region_weights).mean(("lat","lon"))  * conversion_factor
         average = region_slice_mean.mean().values.item()
-        average_34 = region_slice_mean.where(mask_34).dropna(dim='time').mean().values.item()
-        average_not_34 = region_slice_mean.where(1 - mask_34).dropna(dim='time').mean().values.item()
+        average_34 = region_slice_mean.where(mask_enso).dropna(dim='time').mean().values.item()
+        average_not_34 = region_slice_mean.where(1 - mask_enso).dropna(dim='time').mean().values.item()
 
         #create a running average 
         #N.B. Remember if a season is selected there will be less than 12m in a year 
         region_slice_rolling = region_slice_mean.rolling(time= roll_avg_years * months_in_year, center = True).mean()
-        #title = f"{season} Average temperature: {average}, Variance of temperature: {variance}"
-        #line_plot_precip(region_slice_rolling, title)
         output.append((int(i/12),round(average,2), round(average_34,2) ,round(average_not_34,2)))
+        
 
 
 
@@ -182,10 +204,12 @@ for model_pair in all_model_pairs:
     #add legend to the plot
     ax1.legend(bbox_to_anchor=(0.5, -0.1), loc='upper center')
 
-    plot_file_name = sub_path.replace("/","") + "_" + str(region_number) + "_" + variable_name + "_" + "ENSO_34.png"
+    plot_file_name = sub_path.replace("/","") + "_" + str(region_number) + "_" + variable_name + "_" + "ENSO_34_climatology.png"
 
     plt.savefig(plot_path + plot_file_name)
-
+    plt.show()
     plt.close('all')
 
 
+
+# %%

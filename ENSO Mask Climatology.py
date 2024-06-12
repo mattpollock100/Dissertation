@@ -135,9 +135,6 @@ for model_pair in all_model_pairs:
     dataset, periods = convert_dates(dataset, model_end_year)
     data_hist = dataset[variable_name]
 
-    data_hist = dataset[variable_name]
-
-
     weights = data_hist[0,:,:]
     weights = np.cos(np.deg2rad(dataset.lat))
     weights.name = "weights"

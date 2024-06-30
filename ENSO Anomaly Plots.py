@@ -32,7 +32,7 @@ from CommonFunctions import find_enso_events, convert_dates
 
 all_models = [MPI_ESM_SST, IPSL_CM5_Temp, IPSL_CM6_Temp]
 
-all_models = [IPSL_CM6_Temp]   ###DELETE LATER
+all_models = [MPI_ESM_SST]   ###DELETE LATER
 
 chunk_years= 500
 climatology_years = 50
@@ -143,19 +143,26 @@ for model_to_use in all_models:
         #plt.ylabel('Temperature Anomaly (°C)')
         #plt.show()
 
+        
+
+
         count_34, mask_34 = find_enso_events(anomalies_mean_34.dropna('time'), threshold_34, months_threshold_34)
         count_12, mask_12 = find_enso_events(anomalies_mean_12.dropna('time'), threshold_12, months_threshold_12)
 
         output_34.append((int(i/12),count_34))
         output_12.append((int(i/12),count_12))
 
+        #save the mask so it can be used for further analysis
         name = sub_path.replace("/","") + "_" + str(i)
-        np.save(mask_path + name + '_ENSO34_Mask.npy', mask_34)
-        np.save(mask_path + name + '_ENSO12_Mask.npy', mask_12)
+        #np.save(mask_path + name + '_ENSO34_Mask.npy', mask_34)
+        #np.save(mask_path + name + '_ENSO12_Mask.npy', mask_12)
+
+        #save the anomalies so it can be used for further analysis
+        np.save(mask_path + name + '_ENSO34_Anomalies.npy', anomalies_mean_34)
+        np.save(mask_path + name + '_ENSO12_Anomalies.npy', anomalies_mean_12)
+    
     #plot_enso_anomaly_stats(output_34, sub_path.replace('/','') + ' ENSO 3.4 Anomaly Stats')
     #plot_enso_anomaly_stats(output_12, sub_path.replace('/','') + ' ENSO 1+2 Anomaly Stats')
 
 
 
-
-# %%

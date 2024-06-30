@@ -30,6 +30,9 @@ from ModelParams import *
 
 model_to_use = MPI_ESM_PSL
 
+#Look at a model of precip
+#model_to_use = IPSL_CM6_Precip
+
 sub_path = model_to_use['sub_path']
 file = model_to_use['file']
 variable_name = model_to_use['variable_name']
@@ -45,7 +48,8 @@ chunk_years = 500
 
 seasons = ['Annual', 'DJF', 'MAM', 'JJA', 'SON']
 
-seasons = ['Annual']   #Delete later, just for testing
+#only look at one for now
+seasons = ['Annual']
 
 path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/NetCDF'
 plot_path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Plots/'
@@ -55,14 +59,16 @@ filename = path + sub_path + file
 #%%
 #Function to make maps
 print('define function to plot maps')
-def map_plot(data, cmap='BrBG', title = 'Title'):
+def map_plot(data, cmap='BrBG', title = 'Title', subtitle = ''):
     matplotlib.pyplot.figure(figsize=(10,7))
     proj=cartopy.crs.Robinson(central_longitude=-85)
     ax = matplotlib.pyplot.subplot(111, projection=proj)
-    ax.set_extent([-90, -30, -20, 10], crs=cartopy.crs.PlateCarree())
-
+    # set extent for Peru
+    # ax.set_extent([-85, -30, -30, 10], crs=cartopy.crs.PlateCarree())
+    # set extent for the South Pacific Anticyclone
+    ax.set_extent([-110, -70, -10, -60], crs=cartopy.crs.PlateCarree())
     # do the plot
-    data.plot.pcolormesh(ax=ax, transform=cartopy.crs.PlateCarree(), cmap = cmap, cbar_kwargs={'label':'Sea Level Pressure $(Pa)$'})
+    img = data.plot.pcolormesh(ax=ax, transform=cartopy.crs.PlateCarree(), cmap = cmap, cbar_kwargs={'label':'Sea Level Pressure $(Pa)$'})
     
     #levels=numpy.linspace(0,15,41), 
 
@@ -75,7 +81,17 @@ def map_plot(data, cmap='BrBG', title = 'Title'):
 
     ax.coastlines()
     ax.add_feature(cartopy.feature.BORDERS)
-    ax.title.set_text(title)
+    
+    contour_levels = np.arange(100000, 103000, 200)
+    #contour_levels = np.linspace(0, 20, 5)
+
+    contours = ax.contour(data.lon, data.lat, data, colors='black', levels=contour_levels, transform=cartopy.crs.PlateCarree())
+    ax.clabel(contours, inline=True, fontsize=8)
+
+    plt.title(title)
+    plt.suptitle(subtitle)
+    
+    #plt.savefig(plot_path + title.replace(' ','_') + '.png')
     plt.show()
 
 #%%
@@ -94,7 +110,11 @@ dates_xarray = [cftime.DatetimeProlepticGregorian(year=start_year + i // 12, mon
 dataset['time'] = dates_xarray
 
 #select region of interest - need to convert longitude to 0-360 if needed - add that code.
-data_hist = dataset[variable_name].sel(lat=slice(15, -25), lon=slice(265, 335))
+#data_hist = dataset[variable_name].sel(lat=slice(10, -30), lon=slice(275, 330))
+#data_hist = dataset[variable_name].sel(lat=slice(10, -30), lon=slice(-85, -30))
+
+#Region for the South Pacific AntiCyclone
+data_hist = dataset[variable_name].sel(lat=slice(-10, -60), lon=slice(250, 290))
 
 #%%
 
@@ -115,7 +135,7 @@ for season in seasons:
 
     map_plot(baseline_mean,'viridis', 'Baseline ' + season)
     """
-    periods = 6000 ###DELETE LATER just for testing
+    
     #Change to start at chunk_size ?? Or think about how to do the baseline
     for i in range(0,periods,chunk_size):
         print(f"Slicing {i}")
@@ -129,7 +149,7 @@ for season in seasons:
         
         #anomalies = region_slice_mean - baseline_mean
 
-        map_plot(region_slice_mean,'cividis', str(i/12) + ' ' + season)
+        #map_plot(region_slice_mean,'cividis', str(i/12) + ' ' + season)
 
         #smooth region_slice_mean using inverse distance weighting
         # Get the coordinates of the data points
@@ -162,13 +182,13 @@ for season in seasons:
         min_pressure_idx = np.unravel_index(region_slice_mean_smooth_da.values.argmin(), region_slice_mean_smooth_da.shape)
 
         max_lat = region_slice_mean_smooth_da.lat[max_pressure_idx[0]].values
-        max_lon = region_slice_mean_smooth_da.lon[max_pressure_idx[1]].values
+        max_lon = region_slice_mean_smooth_da.lon[max_pressure_idx[1]].values - 360.0
 
         min_lat = region_slice_mean_smooth_da.lat[min_pressure_idx[0]].values
-        min_lon = region_slice_mean_smooth_da.lon[min_pressure_idx[1]].values
+        min_lon = region_slice_mean_smooth_da.lon[min_pressure_idx[1]].values - 360.0
 
-        coords_string = f'Max: {max_lat:.2f}°, {max_lon:.2f}°\nMin: {min_lat:.2f}°, {min_lon:.2f}°'
-        title = str(i/12) + ' ' + season + ' Smoothed\n' + coords_string
-        map_plot(region_slice_mean_smooth_da,'cividis', title)
+        coords_string = f'Max: {max_lat:.2f}°, {max_lon:.2f}°  Min: {min_lat:.2f}°, {min_lon:.2f}°'
+        title = sub_path.replace('/','') + ' ' + str(int(i/12)) + ' ' + season + ' Smoothed'
+        map_plot(region_slice_mean_smooth_da,'cividis', title, coords_string)
 
     # %%

@@ -1,7 +1,31 @@
 #model params
-path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/NetCDF'
-plot_path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Plots/'
 
+TRACE_Temp = {'sub_path' : '/TRACE/', 
+                'file' : 'TRACE_TAS.nc', 
+                'variable_name' : 'TREFHT',
+                'conversion_factor' : 1,
+                'y_min' : 290,
+                'y_max' : 305,
+                'convert_dates' : 2,
+                'model_end_year' : 1950}
+
+TRACE_Precip = {'sub_path' : '/TRACE/', 
+                'file' : 'TRACE_PRECIP_Final.nc', 
+                'variable_name' : 'PRECIP',
+                'conversion_factor' : 86400000,
+                'y_min' : 0,
+                'y_max' : 10,
+                'convert_dates' : 2,
+                'model_end_year' : 1950}
+
+TRACE_PSL = {'sub_path' : '/TRACE/', 
+                'file' : 'TRACE_PSL.nc', 
+                'variable_name' : 'PSL',
+                'conversion_factor' : 1,
+                'y_min' : 0,
+                'y_max' : 10,
+                'convert_dates' : 2,
+                'model_end_year' : 1950}
 
 IPSL_CM6_Precip = {'sub_path' : '/IPSL_CM6/', 
                 'file' : 'TR6AV-Sr02_20000101_79991231_1M_precip.nc', 
@@ -87,4 +111,7 @@ IPSL_CM5_PSL =    {'sub_path' : '/IPSL_CM5/',
 
 
 
-all_models = [IPSL_CM5_Precip, IPSL_CM5_Temp, MPI_ESM_Precip, MPI_ESM_Temp, IPSL_CM6_Precip, IPSL_CM6_Temp]
+all_models = [IPSL_CM5_Precip, IPSL_CM5_Temp, 
+            MPI_ESM_Precip, MPI_ESM_Temp, MPI_ESM_PSL, MPI_ESM_SST,
+            IPSL_CM6_Precip, IPSL_CM6_Temp, 
+            TRACE_Temp, TRACE_Precip, TRACE_PSL]

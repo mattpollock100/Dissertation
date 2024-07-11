@@ -33,20 +33,27 @@ from CommonFunctions import convert_dates
 path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/NetCDF'
 plot_path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Plots/'
 
+mask_path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/ENSO Masks/'
+
 all_models = [MPI_ESM_SST, IPSL_CM5_Temp, IPSL_CM6_Temp]
 
 chunk_years= 500
 
-#lat_slice = [5, -5]
-#initial_lon_slice = [170, 270]
-#average_over = 'lat'
+lat_slice = [5, -5]
+initial_lon_slice = [170, 270]
+average_over = 'lat'
 
-lat_slice = [0, -10]
-initial_lon_slice = [240, 260]
-average_over = 'lon'
+#lat_slice = [0, -10]
+#initial_lon_slice = [240, 260]
+#average_over = 'lon'
 
 cmap = cm.get_cmap('Reds')
 
+season = 'SON'
+
+use_enso_mask = 'all' #enso, not_enso, all
+
+print('-----------' + season + ' ' + use_enso_mask + '----------')
 for model_to_use in all_models:
     
     sub_path = model_to_use['sub_path']
@@ -80,13 +87,30 @@ for model_to_use in all_models:
         print(f"Slicing {i}")
         data_slice = data_hist[i:i+chunk_size,:,:]
 
-        
-    
-        region_slice = data_slice.sel(lat=slice(lat_slice[0], lat_slice[1]), 
-                                    lon=slice(lon_slice[0], lon_slice[1]))
-        region_slice_weighted = region_slice.weighted(weights)
-        region_slice_mean = region_slice_weighted.mean(average_over).mean('time') * conversion_factor
+        mask_file_name = mask_path + sub_path.replace("/","") + "_" + str(i) + '_ENSO34_Mask.npy'
+        mask_enso = np.load(mask_file_name)
+        mask_enso_3D = mask_enso[:, None, None]
 
+        if use_enso_mask == 'enso':
+            data_slice_enso_mask = data_slice.where(mask_enso_3D == 1)
+        elif use_enso_mask == 'not_enso':
+            data_slice_enso_mask = data_slice.where(mask_enso_3D == 0)
+        else:
+            data_slice_enso_mask = data_slice
+        
+        if season == 'Annual':
+            region_slice = data_slice_enso_mask.sel(lat=slice(lat_slice[0], lat_slice[1]), 
+                                        lon=slice(lon_slice[0], lon_slice[1]))
+        else: 
+            region_slice = data_slice_enso_mask.sel(lat=slice(lat_slice[0], lat_slice[1]), 
+                                        lon=slice(lon_slice[0], lon_slice[1])).where(data_slice.time.dt.season == season).dropna(dim='time')  
+        
+
+
+        region_slice_weighted = region_slice.weighted(weights)
+
+        region_slice_mean = region_slice_weighted.mean(average_over).mean('time') * conversion_factor
+        
         if average_over == 'lat':
             coordinates = region_slice_mean.lon.values
         elif average_over == 'lon':
@@ -129,7 +153,7 @@ for model_to_use in all_models:
                     color=color)
             
 
-    title = f"TEST"
+    title = season
     ax.set_title(title)
     ax.set_xlabel('Coordinate')
     ax.set_ylabel('SST')

@@ -23,7 +23,8 @@ import cftime
 
 #%%
 print('Setup Variables')
-models = ['IPSL_CM5_Precip', 'IPSL_CM5_Temp','MPI_ESM_Precip', 'MPI_ESM_Temp', 'IPSL_CM6_Precip', 'IPSL_CM6_Temp']
+models = ['IPSL_CM5_Precip', 'IPSL_CM5_Temp','MPI_ESM_Precip', 'MPI_ESM_Temp', 'IPSL_CM6_Precip', 'IPSL_CM6_Temp', 'TRACE_Precip', 'TRACE_Temp']
+
 region_number = 10
 for model in models:
     model_to_use = model
@@ -34,13 +35,33 @@ for model in models:
 
     seasons = ['Annual', 'DJF', 'MAM', 'JJA', 'SON']
 
+
+    TRACE_Temp = {'sub_path' : '/TRACE/', 
+                    'file' : 'TRACE_TAS.nc', 
+                    'variable_name' : 'TREFHT',
+                    'conversion_factor' : 1,
+                    'y_min' : 290,
+                    'y_max' : 305,
+                    'convert_dates' : 2,
+                    'model_end_year' : 1950}
+    
+    TRACE_Precip = {'sub_path' : '/TRACE/', 
+                    'file' : 'TRACE_PRECIP_Final.nc', 
+                    'variable_name' : 'PRECIP',
+                    'conversion_factor' : 86400000,
+                    'y_min' : 0,
+                    'y_max' : 10,
+                    'convert_dates' : 2,
+                    'model_end_year' : 1950}
+    
     IPSL_CM6_Precip = {'sub_path' : '/IPSL_CM6/', 
                     'file' : 'TR6AV-Sr02_20000101_79991231_1M_precip.nc', 
                     'variable_name' : 'precip',
                     'conversion_factor' : 86400,
                     'y_min' : 0,
                     'y_max' : 10,
-                    'convert_dates' : 2}
+                    'convert_dates' : 2,
+                    'model_end_year' : 1990}
 
     IPSL_CM6_Temp = {'sub_path' : '/IPSL_CM6/', 
                     'file' : 'TR6AV-Sr02_20000101_79991231_1M_t2m.nc', 
@@ -48,7 +69,8 @@ for model in models:
                     'conversion_factor' : 1,
                     'y_min' : 295,
                     'y_max' : 300,
-                    'convert_dates' : 2}
+                    'convert_dates' : 2,
+                    'model_end_year' : 1990}
 
     #https://www.nature.com/articles/s41467-020-18478-6#Sec13
     MPI_ESM_Precip = {'sub_path' : '/MPI_ESM/',
@@ -57,7 +79,8 @@ for model in models:
                     'conversion_factor' : 86400,
                     'y_min' : 0,
                     'y_max' : 10,
-                    'convert_dates' : 2}
+                    'convert_dates' : 2,
+                    'model_end_year' : 1850}
 
     MPI_ESM_Temp =   {'sub_path' : '/MPI_ESM/',
                     'file' : 'tas_Amon_MPI_ESM_TRSF_slo0043_100101_885012.nc',
@@ -65,7 +88,8 @@ for model in models:
                     'conversion_factor' : 1,
                     'y_min' : 295,
                     'y_max' : 300,
-                    'convert_dates' : 2}
+                    'convert_dates' : 2,
+                    'model_end_year' : 1850}
 
     MPI_ESM_SST =    {'sub_path' : '/MPI_ESM/',
                     'file' : 'sst_Amon_MPI_ESM_TRSF_slo0043_100101_885012.nc',
@@ -73,7 +97,8 @@ for model in models:
                     'conversion_factor' : 1,
                     'y_min' : 290,
                     'y_max' : 305,
-                    'convert_dates' : 2}
+                    'convert_dates' : 2,
+                    'model_end_year' : 1850}
 
     MPI_ESM_PSL =    {'sub_path' : '/MPI_ESM/',
                     'file' : 'sst_Amon_MPI_ESM_TRSF_slo0043_100101_885012.nc',
@@ -81,7 +106,8 @@ for model in models:
                     'conversion_factor' : 1,
                     'y_min' : 98000,
                     'y_max' : 105000,
-                    'convert_dates' : 2}
+                    'convert_dates' : 2,
+                    'model_end_year' : 1850}
 
     IPSL_CM5_Precip =  {'sub_path' : '/IPSL_CM5/',
                         'file' : 'pr_Amon_TR5AS_combined.nc',
@@ -89,7 +115,8 @@ for model in models:
                         'conversion_factor' : 86400,
                         'y_min' : 0,
                         'y_max' : 10,
-                        'convert_dates' : 2}
+                        'convert_dates' : 2,
+                    'model_end_year' : 1990}
 
     IPSL_CM5_Temp =    {'sub_path' : '/IPSL_CM5/',
                         'file' : 'tas_Amon_TR5AS_combined.nc',
@@ -97,7 +124,8 @@ for model in models:
                         'conversion_factor' : 1,
                         'y_min' : 295,
                         'y_max' : 300,
-                        'convert_dates' : 2}
+                        'convert_dates' : 2,
+                    'model_end_year' : 1990}
 
     IPSL_CM5_PSL =    {'sub_path' : '/IPSL_CM5/',
                         'file' : 'psl_Amon_TR5AS_combined.nc',
@@ -105,9 +133,12 @@ for model in models:
                         'conversion_factor' : 1,
                         'y_min' : 295,
                         'y_max' : 300,
-                        'convert_dates' : 2}
+                        'convert_dates' : 2,
+                    'model_end_year' : 1990}
 
-    all_models = {'IPSL_CM6_Precip' : IPSL_CM6_Precip,
+    all_models = {'TRACE_Precip' : TRACE_Precip,
+                'TRACE_Temp' : TRACE_Temp,
+                'IPSL_CM6_Precip' : IPSL_CM6_Precip,
                 'IPSL_CM6_Temp': IPSL_CM6_Temp,
                 'MPI_ESM_Precip' : MPI_ESM_Precip,
                 'MPI_ESM_Temp' : MPI_ESM_Temp,
@@ -124,6 +155,8 @@ for model in models:
     y_min = all_models[model_to_use]['y_min']
     y_max = all_models[model_to_use]['y_max']
     convert_dates = all_models[model_to_use]['convert_dates']
+    model_end_year = all_models[model_to_use]['model_end_year']
+
 
 
 
@@ -134,6 +167,7 @@ for model in models:
 
     path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/NetCDF'
     plot_path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Plots/'
+    variable_path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Output Data/'
 
     filename = path + sub_path + file
 
@@ -155,7 +189,7 @@ for model in models:
     if convert_dates == 2:
         # Start date
         date_size = dataset.time.shape[0]
-        start_year = (1850 - (date_size / 12))
+        start_year = (model_end_year - (date_size / 12))
 
         # Number of periods
         periods = date_size
@@ -176,8 +210,8 @@ for model in models:
     weights = numpy.cos(numpy.deg2rad(dataset.lat))
     weights.name = "weights"
 
-    #regionmask.defined_regions.ar6.all.plot(text_kws=dict(color="#67000d", fontsize=7, bbox=dict(pad=0.2, color="w")))
-    #regionmask.defined_regions.ar6.all
+    regionmask.defined_regions.ar6.all.plot(text_kws=dict(color="#67000d", fontsize=7, bbox=dict(pad=0.2, color="w")))
+    regionmask.defined_regions.ar6.all
 
     mask = regionmask.defined_regions.ar6.all.mask(data_hist)
     region_weights=weights.where(mask == region_number ,0)
@@ -209,7 +243,7 @@ for model in models:
             print(f"Slicing {i}")
             data_slice = data_hist[i:i+chunk_size,:,:]
             
-            #region_slice_mean = region_slice.where(data_slice.time.dt.season == "JJA").dropna(dim='time').mean(dim='time') * conversion_factor
+           
             if season == 'Annual':
                 region_slice_mean = data_slice.weighted(region_weights).mean(("lat","lon"))  * conversion_factor
             else:    
@@ -225,35 +259,42 @@ for model in models:
             #line_plot_precip(region_slice_rolling, title)
             output.append((int(i/12),round(average,2),round(variance,4)))
 
-
+        plot = False
+        if plot: 
         #Plot statistics
-        x = [(t[0] + chunk_years / 2 ) for t in output]
-        y_1 = [t[1] for t in output]
-        y_2 = [t[2] for t in output]
+            x = [(t[0] + chunk_years / 2 ) for t in output]
+            y_1 = [t[1] for t in output]
+            y_2 = [t[2] for t in output]
 
-        fig, ax1 = plt.subplots()
+            fig, ax1 = plt.subplots()
 
-        # Plot the first variable on the first y-axis
-        ax1.plot(x, y_1, 'b-')
-        ax1.set_xlabel('Model Years')
-        ax1.set_ylabel('Mean', color='b')
-        ax1.tick_params('y', colors='b')
+            # Plot the first variable on the first y-axis
+            ax1.plot(x, y_1, 'b-')
+            ax1.set_xlabel('Model Years')
+            ax1.set_ylabel('Mean', color='b')
+            ax1.tick_params('y', colors='b')
 
-        # Create a second y-axis that shares the same x-axis
-        ax2 = ax1.twinx()
+            # Create a second y-axis that shares the same x-axis
+            ax2 = ax1.twinx()
 
-        # Plot the second variable on the second y-axis
-        ax2.plot(x, y_2, 'r-')
-        ax2.set_ylabel('Variance', color='r')
-        ax2.tick_params('y', colors='r')
+            # Plot the second variable on the second y-axis
+            ax2.plot(x, y_2, 'r-')
+            ax2.set_ylabel('Variance', color='r')
+            ax2.tick_params('y', colors='r')
 
-        plt.title(f"Model: {sub_path.replace("/","")} Region: {region_number} Variable: {variable_name} Season: {season}")
+            plt.title(f"Model: {sub_path.replace("/","")} Region: {region_number} Variable: {variable_name} Season: {season}")
 
-        plot_file_name = sub_path.replace("/","") + "_" + str(region_number) + "_" + variable_name + "_" + season + ".png"
+            plot_file_name = sub_path.replace("/","") + "_" + str(region_number) + "_" + variable_name + "_" + season + ".png"
 
 
-        plt.savefig(plot_path + plot_file_name)
+            plt.savefig(plot_path + plot_file_name)
 
-        plt.close('all')
+            plt.close('all')
+
+        save_variable = True
+        if save_variable:
+            #save the output variable for use later
+            variable_file_name = variable_path + sub_path.replace("/","") + "_" + str(region_number) + "_" + variable_name + "_" + season + ".npy"
+            numpy.save(variable_file_name, output)
 
     # %%

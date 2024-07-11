@@ -7,6 +7,12 @@ import cartopy
 import matplotlib
 import matplotlib.pyplot as plt
 
+#libraries to calculate area of a contour
+import cartopy.crs as ccrs
+from shapely.geometry import Polygon
+from shapely.ops import transform
+from functools import partial
+import pyproj
 
 # Add a couple of deep down individual functions.
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -66,7 +72,7 @@ def map_plot(data, cmap='BrBG', title = 'Title', subtitle = ''):
     # set extent for Peru
     # ax.set_extent([-85, -30, -30, 10], crs=cartopy.crs.PlateCarree())
     # set extent for the South Pacific Anticyclone
-    ax.set_extent([-110, -70, -10, -60], crs=cartopy.crs.PlateCarree())
+    ax.set_extent([-120, -70, -10, -50], crs=cartopy.crs.PlateCarree())
     # do the plot
     img = data.plot.pcolormesh(ax=ax, transform=cartopy.crs.PlateCarree(), cmap = cmap, cbar_kwargs={'label':'Sea Level Pressure $(Pa)$'})
     
@@ -114,7 +120,7 @@ dataset['time'] = dates_xarray
 #data_hist = dataset[variable_name].sel(lat=slice(10, -30), lon=slice(-85, -30))
 
 #Region for the South Pacific AntiCyclone
-data_hist = dataset[variable_name].sel(lat=slice(-10, -60), lon=slice(250, 290))
+data_hist = dataset[variable_name].sel(lat=slice(-10, -60), lon=slice(230, 300))
 
 #%%
 
@@ -135,7 +141,8 @@ for season in seasons:
 
     map_plot(baseline_mean,'viridis', 'Baseline ' + season)
     """
-    
+    year_output = []
+    area_output = []
     #Change to start at chunk_size ?? Or think about how to do the baseline
     for i in range(0,periods,chunk_size):
         print(f"Slicing {i}")
@@ -191,4 +198,46 @@ for season in seasons:
         title = sub_path.replace('/','') + ' ' + str(int(i/12)) + ' ' + season + ' Smoothed'
         map_plot(region_slice_mean_smooth_da,'cividis', title, coords_string)
 
-    # %%
+        # Calculate the area within the 1022 hPa contour
+
+        data = region_slice_mean_smooth_da
+
+        # Step 1: Extract Contour Paths
+        fig, ax = plt.subplots(subplot_kw={'projection': ccrs.Robinson()})
+        contour = ax.contour(data.lon, data.lat, data, levels=[102200], transform=ccrs.PlateCarree())
+        paths = contour.collections[0].get_paths()
+        plt.close(fig)
+        # Step 2: Convert Paths to Shapely Polygons
+        polygons = [Polygon(path.vertices) for path in paths if path.vertices.size > 0]
+
+        # Step 3: Project Polygons to an Equal-Area CRS
+        # Example projection: Albers Equal Area used here, you might want to choose one that suits your region
+        proj = partial(
+            pyproj.transform,
+            pyproj.Proj(init='epsg:4326'),  # source coordinate system (lat/lon)
+            pyproj.Proj(proj='aea', lat_1=-40, lat_2=-20)  # Albers Equal Area
+        )
+
+        projected_polygons = [transform(proj, polygon) for polygon in polygons]
+
+        # Step 4: Calculate the Area
+        areas = [polygon.area for polygon in projected_polygons]
+        total_area = sum(areas) / 1000000  # Convert to square kilometers
+
+        print(f"Total area within the 102200 Pa contour: {total_area} km2")
+
+        year_output.append(i/12 + chunk_years / 2)
+        area_output.append(total_area)
+# %%
+
+# Plotting
+plt.plot(year_output, area_output)
+
+# Adding labels and title
+plt.xlabel('Year')
+plt.ylabel('Area (km²)')
+plt.title('Area within the 102200 Pa contour over time')
+
+# Display the plot
+plt.show()
+# %%

@@ -27,16 +27,16 @@ import cftime
 print('Opening File')
 
 path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/NetCDF'
-#sub_path ='/IPSL_CM6/'
-#file = 'TR6AV-Sr02_20000101_79991231_1M_precip.nc'
-sub_path = '/MPI_ESM/'
-file = 'pr_Amon_MPI_ESM_TRSF_slo0043_100101_885012.nc'
+sub_path ='/TRACE/'
+file = 'TRACE_TAS.nc'
+#sub_path = '/MPI_ESM/'
+#file = 'pr_Amon_MPI_ESM_TRSF_slo0043_100101_885012.nc'
 
 filename = path + sub_path + file
 
 
 use_weights = True
-conversion_factor = 86400 #for precipitation data in kg m-2 s-1 to mm/day
+conversion_factor = 1 #for precipitation data in kg m-2 s-1 to mm/day
 
 
 dataset = xarray.open_dataset(filename,decode_times=False)
@@ -54,7 +54,7 @@ dates_xarray = [cftime.DatetimeNoLeap(date.year - 6000, date.month, date.day) fo
 dataset['time'] = dates_xarray
 
 #Change this variable to the variable you want to plot
-data_hist = dataset.precip 
+data_hist = dataset.TREFHT 
 
 
 #%%

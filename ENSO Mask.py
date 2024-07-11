@@ -20,6 +20,7 @@ import regionmask
 
 import netCDF4 as nc
 from netCDF4 import num2date
+import seaborn as sns
 
 import cftime
 
@@ -33,6 +34,7 @@ from CommonFunctions import find_enso_events, convert_dates
 
 path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/NetCDF'
 plot_path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Plots/'
+mask_path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/ENSO Masks/'
 
 all_model_pairs =  [[MPI_ESM_SST, MPI_ESM_Precip], [MPI_ESM_SST, MPI_ESM_Temp], 
                     [IPSL_CM5_Temp, IPSL_CM5_Temp], [IPSL_CM5_Temp, IPSL_CM5_Precip],
@@ -40,7 +42,7 @@ all_model_pairs =  [[MPI_ESM_SST, MPI_ESM_Precip], [MPI_ESM_SST, MPI_ESM_Temp],
 
 
 #DELETE THIS JUST FOR TESTING
-all_model_pairs = [ [IPSL_CM6_Temp, IPSL_CM6_Precip]]
+all_model_pairs = [[IPSL_CM6_Temp, IPSL_CM6_Temp]]
 
 region_number = 9
 
@@ -59,9 +61,10 @@ coords_12 = [270, 280]
 
 roll_avg_years = 1
 
-####NOTE, THIS IS USEFUL TO SEE THE TREND IN ENSO ANOMALIES BUT NOT ABSOLUTE LEVELS
-####THAT's BECAUSE ENSO OCCURS DURING CERTAIN TIMES OF THE YEAR MORE FREQUENTLY, SO WOULD NEED
-####TO REMOVE CLIMATOLOGY
+
+
+month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
 
 #%%
 for model_pair in all_model_pairs:
@@ -120,6 +123,8 @@ for model_pair in all_model_pairs:
 
     for i in range(0,max_time,chunk_size):
         print(f"Slicing {i}")
+
+        """
         enso_data_slice = enso_data_hist[i:i+chunk_size,:,:]
         
         nino_34 = enso_data_slice.sel(lat=slice(5, -5), lon=slice(coords_34[0], coords_34[1]))  
@@ -143,14 +148,40 @@ for model_pair in all_model_pairs:
 
         output_34.append((int(i/12),count_34))
         #output_12.append((int(i/12),count_12))
-
+        """
+        
+        mask_file_name = mask_path + sub_path.replace("/","") + "_" + str(i) + '_ENSO34_Mask.npy'
+        mask_34 = np.load(mask_file_name)
 
         data_slice = data_hist[i:i+chunk_size,:,:]
-            
+        
+        
         region_slice_mean = data_slice.weighted(region_weights).mean(("lat","lon"))  * conversion_factor
         average = region_slice_mean.mean().values.item()
         average_34 = region_slice_mean.where(mask_34).dropna(dim='time').mean().values.item()
         average_not_34 = region_slice_mean.where(1 - mask_34).dropna(dim='time').mean().values.item()
+
+        #get the month that ENSO most commonly starts in
+        
+        int_arr = mask_34.astype(int)
+        # Calculate the difference between subsequent elements
+        diff_arr = np.diff(int_arr, prepend=0)
+        # Convert back to boolean array
+        start_month_34 = (diff_arr == 1)
+
+        masked_data = region_slice_mean.where(start_month_34)
+        dropped_na = masked_data.dropna(dim='time')
+        month = dropped_na.time.dt.month
+
+        #get the most common month
+        month_array = month.values
+        month_strings = [month_names[i-1] for i in month_array]
+
+        sns.countplot(month_strings, order=month_names)
+        plt.xlabel('Month')
+        plt.ylabel('Count')
+        plt.title('Histogram of Months ' + str(i) + sub_path.replace('/',''))
+        plt.show()
 
         #create a running average 
         #N.B. Remember if a season is selected there will be less than 12m in a year 
@@ -185,7 +216,9 @@ for model_pair in all_model_pairs:
     plot_file_name = sub_path.replace("/","") + "_" + str(region_number) + "_" + variable_name + "_" + "ENSO_34.png"
 
     plt.savefig(plot_path + plot_file_name)
-
+    plt.show()
     plt.close('all')
 
 
+
+# %%

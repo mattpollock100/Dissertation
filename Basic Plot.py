@@ -27,16 +27,16 @@ import cftime
 print('Opening File')
 
 path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/NetCDF'
-sub_path ='/IPSL_CM6/'
-file = 'TR6AV-Sr02_20000101_79991231_1M_precip.nc'
+sub_path ='/TRACE/'
+file = 'TRACE_TAS.nc'
 #sub_path = '/MPI_ESM/'
 #file = 'pr_Amon_MPI_ESM_TRSF_slo0043_100101_885012.nc'
 
 filename = path + sub_path + file
 
 
-use_weights = False
-conversion_factor = 86400 #for precipitation data in kg m-2 s-1 to mm/day
+use_weights = True
+conversion_factor = 1 #for precipitation data in kg m-2 s-1 to mm/day
 
 
 dataset = xarray.open_dataset(filename,decode_times=False)
@@ -45,20 +45,21 @@ dataset = xarray.open_dataset(filename,decode_times=False)
 
 #%%
 print('Initial Data Tweaks')
-time_var = dataset.time
+#time_var = dataset.time
 # Convert the time values to dates
-dates = num2date(time_var[:], units=time_var.units, calendar=time_var.calendar)
+#dates = num2date(time_var[:], units=time_var.units, calendar=time_var.calendar)
 #dates = num2date((time_var[:]) * 3153.6, units='seconds since 2000-01-01 00:00:00', calendar=time_var.calendar)
 
 # Convert the dates to a format that xarray can understand
-dates_xarray = [cftime.DatetimeNoLeap(date.year - 6000, date.month, date.day) for date in dates]
+#dates_xarray = [cftime.DatetimeNoLeap(date.year - 6000, date.month, date.day) for date in dates]
 # Update the time variable in the dataset
-dataset['time'] = dates_xarray
+#dataset['time'] = dates_xarray
 
 
 #%%
 #Change this variable to the variable you want to plot
-data_hist = dataset.precip 
+data_hist = dataset.TREFHT
+#data_hist = dataset.precip 
 #data_hist = dataset.pr
 
 #Select time slice
@@ -167,35 +168,7 @@ plt.show()
 
 
 
-#%%
-from netCDF4 import Dataset
 
-dataset = Dataset(filename, mode='r')
-
-# Iterate through all variables
-for var in dataset.variables:
-   
-    variable = dataset.variables[var]
-
-    
-    # Print common details of the variable
-    print(f"Variable: {var}")
-    print(f"Dimensions: {variable.dimensions}")
-    print(f"Shape: {variable.shape}")
-    print(f"Data type: {variable.dtype}")
-    
-    
-    # Iterate and print all attributes of the variable
-    for attr_name in variable.ncattrs():
-        attr_value = variable.getncattr(attr_name)
-        print(f"{attr_name}: {attr_value}")
-    
-    #New line 
-    print("\n")
-    
-    
-# Close the dataset
-dataset.close()
 
 
 # %%

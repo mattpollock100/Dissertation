@@ -38,14 +38,14 @@ from ModelParams import *
 
 use_spline = True
 
-ITCZ_models = [IPSL_CM5_Precip, MPI_ESM_Precip, IPSL_CM6_Precip]
-#ITCZ_models = [IPSL_CM5_Precip]
+ITCZ_models = [IPSL_CM5_Precip, MPI_ESM_Precip, IPSL_CM6_Precip, TRACE_Precip]
 
-all_initial_lon_coords = [[-90, -80], [-80, -70]]
+
+#all_initial_lon_coords = [[-90, -80], [-80, -70]]
     #Nino1+2: 90W-80W
     #Peru (roughly): 80W-70W
 
-#all_initial_lon_coords = [[-80, -70]]   
+all_initial_lon_coords = [[-90, -80]]   
 
 lat_coords = [15, -15]
 lat_string = str(lat_coords[0]) + 'N' + '-' + str(abs(lat_coords[1])) + 'S'
@@ -54,12 +54,14 @@ chunk_years= 500
 
 seasons = ['Annual', 'DJF', 'MAM', 'JJA', 'SON']
 
-#seasons = ['Annual']
+seasons = ['Annual']
 
 cmap = cm.get_cmap('Blues')
 
 for model in ITCZ_models:
-    
+    if model == TRACE_Precip:
+        lat_coords = [lat_coords[1], lat_coords[0]]
+
     print('Opening File')
 
     path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/NetCDF'
@@ -102,13 +104,17 @@ for model in ITCZ_models:
         chunk_size = chunk_years * 12
 
         # Focus on a specific longitudinal range
-        region_slice = data_hist.sel(lon=slice(lon_coords[0], lon_coords[1]))  # Modify as needed for your dataset
+        region_slice = data_hist.sel(lon=slice(lon_coords[0], lon_coords[1]))  
 
         for season in seasons:
             fig, ax = plt.subplots()
+            year_output = []
+            CoM_output = []
+            max_output = []
+            max_lat_output = []
 
             for i in range(0,periods,chunk_size):
-                print(f"Slicing {i}")
+                #print(f"Slicing {i}")
                 data_slice = region_slice[i:i+chunk_size,:,:]
                 
                 
@@ -122,12 +128,18 @@ for model in ITCZ_models:
                 latitudes = region_slice_mean.lat.values
                 values = region_slice_mean.values
 
+                #Trace model output is in reverse order to others
+                if model == TRACE_Precip:
+                    latitudes = latitudes[::-1]
+                    values = values[::-1]
+
+
                 if use_spline:
                     #Create a cubic spline to allow a more fine grained distributin of the data
                     cs = CubicSpline(latitudes[::-1], values[::-1])
 
                     #create a finer grid of latitudes
-                    latitudes_fine = numpy.linspace(latitudes[0], latitudes[-1], 100)
+                    latitudes_fine = numpy.linspace(latitudes[0], latitudes[-1], 1000)
                     values_fine = cs(latitudes_fine)
                 else:
                     latitudes_fine = latitudes
@@ -136,29 +148,44 @@ for model in ITCZ_models:
 
                 # Calculate the center of mass
                 centre_of_mass = numpy.average(latitudes_fine, weights=values_fine)
+                CoM_output.append(centre_of_mass)
                 centre_of_mass = round(centre_of_mass, 2)
                 year = int(i/12 + chunk_years / 2)
+                year_output.append(year)
+
                 
                 #find the maximum value of the spline and it's latitude
-                max_value = max(values_fine)
+                #only considering values north of the equator (real ITCZ)
+                values_fine_north = [value for value, latitude in zip(values_fine, latitudes_fine) if latitude > 0]
+                max_value = max(values_fine_north)
                 max_value_index = numpy.where(values_fine == max_value)
                 latitude_of_max_value = latitudes_fine[max_value_index][0]
+                max_output.append(max_value)
+                max_lat_output.append(latitude_of_max_value)
                 latitude_of_max_value = round(latitude_of_max_value, 2)
 
                 color = cmap(i / periods)
                 ax.plot(latitudes_fine, values_fine, label=f"Time: {year} Max: {latitude_of_max_value} CofM: {centre_of_mass}", color=color)
 
-            title = f"{model_name} {season} {lat_string} {lon_string}"
+            title = model_name +  ' Precipitation Over ' + lon_string +' (' + season + ')'
             ax.set_title(title)
             ax.set_xlabel('Latitude')
-            ax.set_ylabel('Precipitation')
-            ax.legend(bbox_to_anchor=(0.5, -0.1), loc='upper center')
+            ax.set_ylabel('Precipitation (mm day$^{-1}$)')
+            #ax.legend(bbox_to_anchor=(0.5, -0.1), loc='upper center')
             
             
             plot_file_name = title + '.png'
             if not(use_spline):
                 plot_file_name = title + '_NoSpline.png'
-            plt.savefig(plot_path + plot_file_name, bbox_inches='tight')
+            #plt.savefig(plot_path + plot_file_name, bbox_inches='tight')
+            print(model_name)
+            print(season)
+            print(year_output)
+            print(CoM_output)
+            print(max_output)
+            print(max_lat_output)
             plt.show()
             plt.close()
 
+
+# %%

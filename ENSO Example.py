@@ -50,9 +50,15 @@ IPSL_CM6_TAS =   {'sub_path' : '/IPSL_CM6/',
                 'coords_12' : [-90, -80],
                 'model_end_year' : 1990}
 
+TRACE =   {'sub_path' : '/TRACE/',
+                'file' : 'TRACE_TS.nc', 
+                'variable_name' : 'TS',
+                'coords_34' : [190, 240],
+                'coords_12' : [270, 280],
+                'model_end_year' : 1950}
 
 
-model_to_use = IPSL_CM6_TAS
+model_to_use = TRACE
 
 sub_path = model_to_use['sub_path']
 file = model_to_use['file']
@@ -136,8 +142,12 @@ for i in range(0,max_time,chunk_size):
     data_slice = data_hist[i:i+chunk_size,:,:]
     
     #NEED TO DOUBLE CHECK THE ACTUAL DEFINITION OF THE ENSO REGIONS
-    nino_34 = data_slice.sel(lat=slice(5, -5), lon=slice(coords_34[0], coords_34[1]))  
-    nino_12 = data_slice.sel(lat=slice(0, -10), lon=slice(coords_12[0], coords_12[1]))
+    if model_to_use == TRACE:
+        nino_34 = data_slice.sel(lat=slice(-5, 5), lon=slice(coords_34[0], coords_34[1]))  
+        nino_12 = data_slice.sel(lat=slice(-10, 0), lon=slice(coords_12[0], coords_12[1]))
+    else:
+        nino_34 = data_slice.sel(lat=slice(5, -5), lon=slice(coords_34[0], coords_34[1]))  
+        nino_12 = data_slice.sel(lat=slice(0, -10), lon=slice(coords_12[0], coords_12[1]))
 
     climatology_34 = nino_34.groupby('time.month').apply(
         lambda x: x.rolling(time=window_size, center=True, min_periods=1).mean())
@@ -219,21 +229,38 @@ output_34_mean_length = [x[1][2] for x in output_34]
 
 
 
-np.save(output_path + sub_path.replace('/','') + '_enso_34_years.npy', output_34_years)
-np.save(output_path + sub_path.replace('/','') + '_enso_34_count.npy', output_34_count)
-np.save(output_path + sub_path.replace('/','') + '_enso_34_mean_anomaly.npy', output_34_mean_anomaly)
-np.save(output_path + sub_path.replace('/','') + '_enso_34_mean_length.npy', output_34_mean_length)
+#np.save(output_path + sub_path.replace('/','') + '_enso_34_years.npy', output_34_years)
+#np.save(output_path + sub_path.replace('/','') + '_enso_34_count.npy', output_34_count)
+#np.save(output_path + sub_path.replace('/','') + '_enso_34_mean_anomaly.npy', output_34_mean_anomaly)
+#np.save(output_path + sub_path.replace('/','') + '_enso_34_mean_length.npy', output_34_mean_length)
 
 output_12_years = [x[0] for x in output_12]
 output_12_count = [x[1][0] for x in output_12]
 output_12_mean_anomaly = [x[1][1] for x in output_12]
 output_12_mean_length = [x[1][2] for x in output_12]
 
-np.save(output_path + sub_path.replace('/','') + '_enso_12_years.npy', output_12_years)
-np.save(output_path + sub_path.replace('/','') + '_enso_12_count.npy', output_12_count)
-np.save(output_path + sub_path.replace('/','') + '_enso_12_mean_anomaly.npy', output_12_mean_anomaly)
-np.save(output_path + sub_path.replace('/','') + '_enso_12_mean_length.npy', output_12_mean_length)
+#np.save(output_path + sub_path.replace('/','') + '_enso_12_years.npy', output_12_years)
+#np.save(output_path + sub_path.replace('/','') + '_enso_12_count.npy', output_12_count)
+#np.save(output_path + sub_path.replace('/','') + '_enso_12_mean_anomaly.npy', output_12_mean_anomaly)
+#np.save(output_path + sub_path.replace('/','') + '_enso_12_mean_length.npy', output_12_mean_length)
 
 
 
+# %%
+
+to_modify = [output_34_years, output_34_count, output_34_mean_anomaly, output_34_mean_length]
+
+for var in to_modify:
+    var.pop()
+# %%
+
+np.save(output_path + sub_path.replace('/','') + '_enso_34_years.npy', output_34_years)
+np.save(output_path + sub_path.replace('/','') + '_enso_34_count.npy', output_34_count)
+np.save(output_path + sub_path.replace('/','') + '_enso_34_mean_anomaly.npy', output_34_mean_anomaly)
+np.save(output_path + sub_path.replace('/','') + '_enso_34_mean_length.npy', output_34_mean_length)
+
+#np.save(output_path + sub_path.replace('/','') + '_enso_12_years.npy', output_12_years)
+#np.save(output_path + sub_path.replace('/','') + '_enso_12_count.npy', output_12_count)
+#np.save(output_path + sub_path.replace('/','') + '_enso_12_mean_anomaly.npy', output_12_mean_anomaly)
+#np.save(output_path + sub_path.replace('/','') + '_enso_12_mean_length.npy', output_12_mean_length)
 # %%

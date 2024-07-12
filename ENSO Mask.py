@@ -36,13 +36,21 @@ path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/Net
 plot_path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Plots/'
 mask_path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/ENSO Masks/'
 
+output_path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Output Data/'
+
 all_model_pairs =  [[MPI_ESM_SST, MPI_ESM_Precip], [MPI_ESM_SST, MPI_ESM_Temp], 
                     [IPSL_CM5_Temp, IPSL_CM5_Temp], [IPSL_CM5_Temp, IPSL_CM5_Precip],
                     [IPSL_CM6_Temp, IPSL_CM6_Temp], [IPSL_CM6_Temp, IPSL_CM6_Precip]]
 
 
+#[MPI_ESM_SST, MPI_ESM_Precip], [MPI_ESM_SST, MPI_ESM_Temp], 
+#[IPSL_CM5_Temp, IPSL_CM5_Temp], [IPSL_CM5_Temp, IPSL_CM5_Precip]
+
+
 #DELETE THIS JUST FOR TESTING
-all_model_pairs = [[IPSL_CM6_Temp, IPSL_CM6_Temp]]
+all_model_pairs = [[TRACE_TS, TRACE_Temp], [TRACE_TS, TRACE_Precip]]
+
+enso_type = '34'
 
 region_number = 9
 
@@ -124,33 +132,39 @@ for model_pair in all_model_pairs:
     for i in range(0,max_time,chunk_size):
         print(f"Slicing {i}")
 
-        """
-        enso_data_slice = enso_data_hist[i:i+chunk_size,:,:]
+        #CAreful here, setting to true will create new masks that take a long time
+        if False:
+            enso_data_slice = enso_data_hist[i:i+chunk_size,:,:]
+            
+            nino_34 = enso_data_slice.sel(lat=slice(-5, 5), lon=slice(coords_34[0], coords_34[1]))  
+            nino_12 = enso_data_slice.sel(lat=slice(-10, 0), lon=slice(coords_12[0], coords_12[1]))
+
+            climatology_34 = nino_34.groupby('time.month').apply(
+                lambda x: x.rolling(time=window_size, center=True, min_periods=1).mean())
+
+            climatology_12 = nino_12.groupby('time.month').apply(
+                lambda x: x.rolling(time=window_size, center=True, min_periods=1).mean())
+
+            anomalies_34 = nino_34 - climatology_34
+            anomalies_12 = nino_12 - climatology_12
+
+            anomalies_mean_34 = anomalies_34.mean(['lat', 'lon'])
+
+            anomalies_mean_12 = anomalies_12.mean(['lat', 'lon'])
+
+            count_34, mask_34 = find_enso_events(anomalies_mean_34.dropna('time'), threshold_34, months_threshold_34)
+            count_12, mask_12 = find_enso_events(anomalies_mean_12.dropna('time'), threshold_12, months_threshold_12)
+
+            output_34.append((int(i/12),count_34))
+            output_12.append((int(i/12),count_12))
         
-        nino_34 = enso_data_slice.sel(lat=slice(5, -5), lon=slice(coords_34[0], coords_34[1]))  
-        #nino_12 = enso_data_slice.sel(lat=slice(0, -10), lon=slice(coords_12[0], coords_12[1]))
-
-        climatology_34 = nino_34.groupby('time.month').apply(
-            lambda x: x.rolling(time=window_size, center=True, min_periods=1).mean())
-
-        #climatology_12 = nino_12.groupby('time.month').apply(
-        #    lambda x: x.rolling(time=window_size, center=True, min_periods=1).mean())
-
-        anomalies_34 = nino_34 - climatology_34
-        #anomalies_12 = nino_12 - climatology_12
-
-        anomalies_mean_34 = anomalies_34.mean(['lat', 'lon'])
-
-        #anomalies_mean_12 = anomalies_12.mean(['lat', 'lon'])
-
-        count_34, mask_34 = find_enso_events(anomalies_mean_34.dropna('time'), threshold_34, months_threshold_34)
-        #count_12, mask_12 = find_enso_events(anomalies_mean_12.dropna('time'), threshold_12, months_threshold_12)
-
-        output_34.append((int(i/12),count_34))
-        #output_12.append((int(i/12),count_12))
-        """
+            mask_file_name_34 = mask_path + sub_path.replace("/","") + "_" + str(i) + '_ENSO34_Mask.npy'
+            mask_file_name_12 = mask_path + sub_path.replace("/","") + "_" + str(i) + '_ENSO12_Mask.npy'
+            np.save(mask_file_name_34, mask_34)
+            np.save(mask_file_name_12, mask_12)
+            
+        mask_file_name = mask_path + sub_path.replace("/","") + "_" + str(i) + '_ENSO' + enso_type + '_Mask.npy'
         
-        mask_file_name = mask_path + sub_path.replace("/","") + "_" + str(i) + '_ENSO34_Mask.npy'
         mask_34 = np.load(mask_file_name)
 
         data_slice = data_hist[i:i+chunk_size,:,:]
@@ -178,8 +192,8 @@ for model_pair in all_model_pairs:
         month_strings = [month_names[i-1] for i in month_array]
 
         sns.countplot(month_strings, order=month_names)
-        plt.xlabel('Month')
-        plt.ylabel('Count')
+        plt.xlabel('Count')
+        plt.ylabel('Month')
         plt.title('Histogram of Months ' + str(i) + sub_path.replace('/',''))
         plt.show()
 
@@ -213,12 +227,23 @@ for model_pair in all_model_pairs:
     #add legend to the plot
     ax1.legend(bbox_to_anchor=(0.5, -0.1), loc='upper center')
 
-    plot_file_name = sub_path.replace("/","") + "_" + str(region_number) + "_" + variable_name + "_" + "ENSO_34.png"
+    plot_file_name = sub_path.replace("/","") + "_" + str(region_number) + "_" + variable_name + "_" + "ENSO_" + enso_type + ".png"
 
-    plt.savefig(plot_path + plot_file_name)
+    #plt.savefig(plot_path + plot_file_name)
     plt.show()
     plt.close('all')
 
+    #Save the output
+    model_name = sub_path.replace("/","")
+    
+    np.save(output_path + model_name + "_" + enso_type + variable_name + "_years_ENSO_Impact.npy", x)
+    np.save(output_path + model_name + "_" + enso_type + variable_name + "_total_ENSO_Impact.npy", y_1)
+    np.save(output_path + model_name + "_" + enso_type + variable_name + "_ENSO_ENSO_Impact.npy", y_2)
+    np.save(output_path + model_name + "_" + enso_type + variable_name + "_not_ENSO_ENSO_Impact.npy", y_3)
+
+
+    
 
 
 # %%
+

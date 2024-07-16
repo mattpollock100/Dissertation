@@ -58,21 +58,21 @@ precip_model_pairs =  [[MPI_ESM_SST, MPI_ESM_Precip],
                     [TRACE_TS, TRACE_Precip]]
 
 
-all_model_pairs = precip_model_pairs
+all_model_pairs = temp_model_pairs
 
 #For Mid-Holocene
-i_dic = {'MPI_ESM' : 24000,
-        'IPSL_CM5' : 0,
-        'IPSL_CM6' : 0,
-        'TRACE' : 24000}
+#i_dic = {'MPI_ESM' : 24000,
+#        'IPSL_CM5' : 0,
+#        'IPSL_CM6' : 0,
+#        'TRACE' : 24000}
 
 #For Pre-Industrial
-#i_dic = {'MPI_ESM' : 90000,
-#        'IPSL_CM5' : 60000,
-#        'IPSL_CM6' : 60000,
-#        'TRACE' : 90000}
+i_dic = {'MPI_ESM' : 90000,
+        'IPSL_CM5' : 60000,
+        'IPSL_CM6' : 60000,
+        'TRACE' : 90000}
 
-enso_type = '34'
+enso_type = '12'
 
 region_number = 9
 
@@ -201,14 +201,14 @@ for model_pair in all_model_pairs:
     if i < 30000:
         time_frame = 'Mid-Holocene'
     
-    title = model_name + ' ' + time_frame + ' ' + enso_type + ' Temp Anomalies'
+    title = model_name + ' ' + time_frame + ' Niño' + enso_type + ' Temp Anomalies'
     label = 'Temp Anomalies (K)'
     cmap = 'coolwarm'
     vmax = 1.0
     vmin = -vmax
 
-    if True:
-        title = model_name + ' ' + time_frame + ' ' + enso_type + ' Precip Anomalies'
+    if False:
+        title = model_name + ' ' + time_frame + ' Niño' + enso_type + ' Precip Anomalies'
         label = 'Precipitation Anomalies mm (mm day$^{-1}$)'
         cmap = 'BrBG'
         vmax = 3.0

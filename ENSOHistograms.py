@@ -38,17 +38,14 @@ mask_path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Dat
 
 output_path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Output Data/'
 
-all_model_pairs =  [[MPI_ESM_SST, MPI_ESM_Precip], [MPI_ESM_SST, MPI_ESM_Temp], 
-                    [IPSL_CM5_Temp, IPSL_CM5_Temp], [IPSL_CM5_Temp, IPSL_CM5_Precip],
-                    [IPSL_CM6_Temp, IPSL_CM6_Temp], [IPSL_CM6_Temp, IPSL_CM6_Precip]]
-
-
-#[MPI_ESM_SST, MPI_ESM_Precip], [MPI_ESM_SST, MPI_ESM_Temp], 
-#[IPSL_CM5_Temp, IPSL_CM5_Temp], [IPSL_CM5_Temp, IPSL_CM5_Precip]
+all_model_pairs =  [[MPI_ESM_SST, MPI_ESM_Temp], 
+                    [IPSL_CM5_Temp, IPSL_CM5_Temp],
+                    [IPSL_CM6_Temp, IPSL_CM6_Temp],
+                    [TRACE_TS, TRACE_Temp]]
 
 
 #DELETE THIS JUST FOR TESTING
-all_model_pairs = [[TRACE_TS, TRACE_Temp]]
+all_model_pairs = [[MPI_ESM_SST, MPI_ESM_Temp]]
 
 enso_type = '34'
 
@@ -74,6 +71,13 @@ roll_avg_years = 1
 month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 
+i_dic = {'IPSL_CM5': [0, 60000],
+         'MPI_ESM': [24000, 84000],
+         'IPSL_CM6': [0, 60000],
+         'TRACE': [24000, 90000]}
+
+
+
 #%%
 for model_pair in all_model_pairs:
 
@@ -88,6 +92,9 @@ for model_pair in all_model_pairs:
     file = enso_model_to_use['file']
     variable_name = enso_model_to_use['variable_name']
     model_end_year = enso_model_to_use['model_end_year']
+
+    model_name = sub_path.replace("/","")
+    i_range = i_dic[model_name]
 
     # Convert the time values to dates
     enso_dataset = xarray.open_dataset(path + sub_path + file)
@@ -135,40 +142,11 @@ for model_pair in all_model_pairs:
 
     months_in_year = 12
 
-    for i in range(0,max_time,chunk_size):
+    for i in i_range:
         print(f"Slicing {i}")
+        period = 'Mid-Holocene'
+        if i > 30000: period = 'Pre-Industrial'
 
-        #CAreful here, setting to true will create new masks that take a long time
-        if False:
-            enso_data_slice = enso_data_hist[i:i+chunk_size,:,:]
-            
-            nino_34 = enso_data_slice.sel(lat=slice(-5, 5), lon=slice(coords_34[0], coords_34[1]))  
-            nino_12 = enso_data_slice.sel(lat=slice(-10, 0), lon=slice(coords_12[0], coords_12[1]))
-
-            climatology_34 = nino_34.groupby('time.month').apply(
-                lambda x: x.rolling(time=window_size, center=True, min_periods=1).mean())
-
-            climatology_12 = nino_12.groupby('time.month').apply(
-                lambda x: x.rolling(time=window_size, center=True, min_periods=1).mean())
-
-            anomalies_34 = nino_34 - climatology_34
-            anomalies_12 = nino_12 - climatology_12
-
-            anomalies_mean_34 = anomalies_34.mean(['lat', 'lon'])
-
-            anomalies_mean_12 = anomalies_12.mean(['lat', 'lon'])
-
-            count_34, mask_34 = find_enso_events(anomalies_mean_34.dropna('time'), threshold_34, months_threshold_34)
-            count_12, mask_12 = find_enso_events(anomalies_mean_12.dropna('time'), threshold_12, months_threshold_12)
-
-            output_34.append((int(i/12),count_34))
-            output_12.append((int(i/12),count_12))
-        
-            mask_file_name_34 = mask_path + sub_path.replace("/","") + "_" + str(i) + '_ENSO34_Mask.npy'
-            mask_file_name_12 = mask_path + sub_path.replace("/","") + "_" + str(i) + '_ENSO12_Mask.npy'
-            np.save(mask_file_name_34, mask_34)
-            np.save(mask_file_name_12, mask_12)
-            
         mask_file_name = mask_path + sub_path.replace("/","") + "_" + str(i) + '_ENSO' + enso_type + '_Mask.npy'
         
         mask_34 = np.load(mask_file_name)
@@ -200,15 +178,8 @@ for model_pair in all_model_pairs:
         sns.countplot(month_strings, order=month_names)
         plt.xlabel('Count')
         plt.ylabel('Month')
-        plt.title('Histogram of Months ' + str(i) + sub_path.replace('/',''))
+        plt.title(model_name + ' ' + period + ' Nino' + enso_type + ' Start Month')
         plt.show()
-
-        #create a running average 
-        #N.B. Remember if a season is selected there will be less than 12m in a year 
-        region_slice_rolling = region_slice_mean.rolling(time= roll_avg_years * months_in_year, center = True).mean()
-        #title = f"{season} Average temperature: {average}, Variance of temperature: {variance}"
-        #line_plot_precip(region_slice_rolling, title)
-        output.append((int(i/12),round(average,2), round(average_34,2) ,round(average_not_34,2)))
 
         MAM_count = np.sum(np.isin(month_array, [3, 4, 5]))
         MAM_pct = MAM_count / len(month_array)
@@ -228,42 +199,6 @@ for model_pair in all_model_pairs:
         SON_pct_output.append(SON_pct)
         year_output.append(int(i/12))
 
-
-    #Plot statistics
-    x = [(t[0] + chunk_years / 2 ) for t in output]
-    y_1 = [t[1] for t in output]
-    y_2 = [t[2] for t in output]
-    y_3 = [t[3] for t in output]
-
-
-    fig, ax1 = plt.subplots()
-
-
-    # Plot the first variable on the first y-axis
-    ax1.plot(x, y_1, 'b-', label = 'Total')
-    ax1.plot(x, y_2, 'r-', label = 'ENSO')
-    ax1.plot(x, y_3, 'g-', label = 'Not ENSO')
-
-    ax1.set_xlabel('Model Years')
-    ax1.set_ylabel(variable_name)
-
-    #add legend to the plot
-    ax1.legend(bbox_to_anchor=(0.5, -0.1), loc='upper center')
-
-    plot_file_name = sub_path.replace("/","") + "_" + str(region_number) + "_" + variable_name + "_" + "ENSO_" + enso_type + ".png"
-
-    #plt.savefig(plot_path + plot_file_name)
-    plt.show()
-    plt.close('all')
-
-    #Save the output
-    model_name = sub_path.replace("/","")
     
-    #np.save(output_path + model_name + "_" + enso_type + variable_name + "_years_ENSO_Impact.npy", x)
-    #np.save(output_path + model_name + "_" + enso_type + variable_name + "_total_ENSO_Impact.npy", y_1)
-    #np.save(output_path + model_name + "_" + enso_type + variable_name + "_ENSO_ENSO_Impact.npy", y_2)
-    #np.save(output_path + model_name + "_" + enso_type + variable_name + "_not_ENSO_ENSO_Impact.npy", y_3)
 
-    #for month_array, count how many times each month appears in the array
-
-    
+# %%

@@ -34,7 +34,7 @@ print('Setup Variables')
 
 from ModelParams import *
 
-model_to_use = MPI_ESM_PSL
+model_to_use = TRACE_PSL
 
 #Look at a model of precip
 #model_to_use = IPSL_CM6_Precip
@@ -120,7 +120,10 @@ dataset['time'] = dates_xarray
 #data_hist = dataset[variable_name].sel(lat=slice(10, -30), lon=slice(-85, -30))
 
 #Region for the South Pacific AntiCyclone
-data_hist = dataset[variable_name].sel(lat=slice(-10, -60), lon=slice(230, 300))
+if model_to_use == TRACE_PSL:
+    data_hist = dataset[variable_name].sel(lat=slice(-60, -10), lon=slice(230, 300))
+else:
+    data_hist = dataset[variable_name].sel(lat=slice(-10, -60), lon=slice(230, 300))
 
 #%%
 
@@ -204,7 +207,7 @@ for season in seasons:
 
         # Step 1: Extract Contour Paths
         fig, ax = plt.subplots(subplot_kw={'projection': ccrs.Robinson()})
-        contour = ax.contour(data.lon, data.lat, data, levels=[102200], transform=ccrs.PlateCarree())
+        contour = ax.contour(data.lon, data.lat, data, levels=[102000], transform=ccrs.PlateCarree())
         paths = contour.collections[0].get_paths()
         plt.close(fig)
         # Step 2: Convert Paths to Shapely Polygons
@@ -224,7 +227,7 @@ for season in seasons:
         areas = [polygon.area for polygon in projected_polygons]
         total_area = sum(areas) / 1000000  # Convert to square kilometers
 
-        print(f"Total area within the 102200 Pa contour: {total_area} km2")
+        print(f"Total area within the 102000 Pa contour: {total_area} km2")
 
         year_output.append(i/12 + chunk_years / 2)
         area_output.append(total_area)
@@ -236,7 +239,7 @@ plt.plot(year_output, area_output)
 # Adding labels and title
 plt.xlabel('Year')
 plt.ylabel('Area (km²)')
-plt.title('Area within the 102200 Pa contour over time')
+plt.title('Area within the 102000 Pa contour over time')
 
 # Display the plot
 plt.show()

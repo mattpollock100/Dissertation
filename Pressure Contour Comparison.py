@@ -23,10 +23,14 @@ import cftime
 
 from scipy.interpolate import griddata
 
+import matplotlib.lines as mlines
+
+from ModelParams import *
+
 #%%
 print('Setup Variables')
 
-from ModelParams import *
+
 
 model_to_use = TRACE_PSL
 
@@ -44,6 +48,8 @@ region_number = 9
 chunk_years = 500
 
 seasons = ['Annual', 'DJF', 'MAM', 'JJA', 'SON']
+
+seasons = ['Annual']
 
 path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Data/NetCDF'
 plot_path = 'C:/Users/mattp/OneDrive/Desktop/Climate Change MSc/Dissertation/Plots/'
@@ -65,13 +71,19 @@ dates_xarray = [cftime.DatetimeProlepticGregorian(year=start_year + i // 12, mon
 dataset['time'] = dates_xarray
 
 #select region of interest - need to convert longitude to 0-360 if needed - add that code.
-if model_to_use == MPI_ESM_PSL:
-    data_hist = dataset[variable_name].sel(lat=slice(10, -30), lon=slice(275, 330))
-elif model_to_use == TRACE_PSL:
-    data_hist = dataset[variable_name].sel(lat=slice(-30, 10), lon=slice(275, 330))
+#For NWS
+#if model_to_use == MPI_ESM_PSL:
+#    data_hist = dataset[variable_name].sel(lat=slice(10, -30), lon=slice(275, 330))
+#elif model_to_use == TRACE_PSL:
+#    data_hist = dataset[variable_name].sel(lat=slice(-30, 10), lon=slice(275, 330))
 
 #pick region for SPAC
-#data_hist = dataset[variable_name].sel(lat=slice(-10, -60), lon=slice(230, 300))
+if model_to_use == MPI_ESM_PSL:
+    data_hist = dataset[variable_name].sel(lat=slice(0, -70), lon=slice(220, 310))
+elif model_to_use == TRACE_PSL:
+    data_hist = dataset[variable_name].sel(lat=slice(-70, 0), lon=slice(220, 310))
+
+
 
 for season in seasons:
     months_in_year = 3
@@ -144,10 +156,10 @@ for season in seasons:
     ax = matplotlib.pyplot.subplot(111, projection=proj)
     
     #Pick this one for NWS / Region 9
-    ax.set_extent([-85, -30, -30, 10], crs=cartopy.crs.PlateCarree())
+    #ax.set_extent([-85, -30, -30, 10], crs=cartopy.crs.PlateCarree())
 
     #Pick this one for SPAC
-    #ax.set_extent([-120, -70, -10, -50], crs=cartopy.crs.PlateCarree())
+    ax.set_extent([-130, -60, 0, -60], crs=cartopy.crs.PlateCarree())
     
     # do the plot
     #img = data.plot.pcolormesh(ax=ax, transform=cartopy.crs.PlateCarree(), cmap = 'cividis', cbar_kwargs={'label':'Sea Level Pressure $(Pa)$'})
@@ -163,6 +175,8 @@ for season in seasons:
 
     ax.coastlines()
     ax.add_feature(cartopy.feature.BORDERS)
+    ax.add_feature(cartopy.feature.LAND, facecolor='green')
+    ax.add_feature(cartopy.feature.OCEAN, facecolor='#ADD8E6')
 
     contour_levels = np.arange(100000, 103000, 200)
 
@@ -172,6 +186,13 @@ for season in seasons:
 
     contours_end = ax.contour(smoothed_data_end.lon, smoothed_data_end.lat, smoothed_data_end, colors='red', levels=contour_levels, transform=cartopy.crs.PlateCarree())
     ax.clabel(contours_end, inline=True, fontsize=8)
+
+    # Create custom legend entries
+    start_legend = mlines.Line2D([], [], color='black', label='Mid-Holocene')
+    end_legend = mlines.Line2D([], [], color='red', label='EndPre-Industrial')
+
+    # Add the legend to the plot
+    ax.legend(handles=[start_legend, end_legend], framealpha=1.0)
 
     model_name = sub_path.replace('/','')
 

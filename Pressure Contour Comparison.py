@@ -72,16 +72,16 @@ dataset['time'] = dates_xarray
 
 #select region of interest - need to convert longitude to 0-360 if needed - add that code.
 #For NWS
-#if model_to_use == MPI_ESM_PSL:
-#    data_hist = dataset[variable_name].sel(lat=slice(10, -30), lon=slice(275, 330))
-#elif model_to_use == TRACE_PSL:
-#    data_hist = dataset[variable_name].sel(lat=slice(-30, 10), lon=slice(275, 330))
+if model_to_use == MPI_ESM_PSL:
+    data_hist = dataset[variable_name].sel(lat=slice(10, -30), lon=slice(275, 330))
+elif model_to_use == TRACE_PSL:
+    data_hist = dataset[variable_name].sel(lat=slice(-30, 10), lon=slice(275, 330))
 
 #pick region for SPAC
-if model_to_use == MPI_ESM_PSL:
-    data_hist = dataset[variable_name].sel(lat=slice(0, -70), lon=slice(220, 310))
-elif model_to_use == TRACE_PSL:
-    data_hist = dataset[variable_name].sel(lat=slice(-70, 0), lon=slice(220, 310))
+#if model_to_use == MPI_ESM_PSL:
+#    data_hist = dataset[variable_name].sel(lat=slice(0, -70), lon=slice(220, 310))
+#elif model_to_use == TRACE_PSL:
+#    data_hist = dataset[variable_name].sel(lat=slice(-70, 0), lon=slice(220, 310))
 
 
 
@@ -156,10 +156,10 @@ for season in seasons:
     ax = matplotlib.pyplot.subplot(111, projection=proj)
     
     #Pick this one for NWS / Region 9
-    #ax.set_extent([-85, -30, -30, 10], crs=cartopy.crs.PlateCarree())
+    ax.set_extent([-85, -30, -30, 10], crs=cartopy.crs.PlateCarree())
 
     #Pick this one for SPAC
-    ax.set_extent([-130, -60, 0, -60], crs=cartopy.crs.PlateCarree())
+    #ax.set_extent([-130, -60, 0, -60], crs=cartopy.crs.PlateCarree())
     
     # do the plot
     #img = data.plot.pcolormesh(ax=ax, transform=cartopy.crs.PlateCarree(), cmap = 'cividis', cbar_kwargs={'label':'Sea Level Pressure $(Pa)$'})
@@ -185,11 +185,11 @@ for season in seasons:
     #ax.clabel(contours_start, inline=True, fontsize=8)
 
     contours_end = ax.contour(smoothed_data_end.lon, smoothed_data_end.lat, smoothed_data_end, colors='red', levels=contour_levels, transform=cartopy.crs.PlateCarree())
-    ax.clabel(contours_end, inline=True, fontsize=8)
+    ax.clabel(contours_end, inline=True, fontsize=10)
 
     # Create custom legend entries
     start_legend = mlines.Line2D([], [], color='black', label='Mid-Holocene')
-    end_legend = mlines.Line2D([], [], color='red', label='EndPre-Industrial')
+    end_legend = mlines.Line2D([], [], color='red', label='Pre-Industrial')
 
     # Add the legend to the plot
     ax.legend(handles=[start_legend, end_legend], framealpha=1.0)

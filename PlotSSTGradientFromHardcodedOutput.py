@@ -112,28 +112,51 @@ def calendar_years(model_years, end_year):
 def get_anomalies(data, zero_point):
     anomalies = [data_point - data[zero_point] for data_point in data]
     return anomalies
+#%%
+def plot_with_ci(x, y, color, label, ax, ci):
+    # Perform linear regression
+    slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+
+    # Calculate the 95% confidence interval for the slope
+    alpha = 1 - ci  # 95% confidence level
+    n = len(x)
+    t_value = stats.t.ppf(1 - alpha/2, df=n-2)  # Two-tailed t-distribution
+    slope_conf_interval = (slope - t_value * std_err, slope + t_value * std_err)
+
+    print(f"Slope: {slope}")
+    print(f"Confidence Interval for the Slope: {slope_conf_interval}")
+
+    # Plotting the data and the line of best fit
+    plt.plot(x, y, color = color, label=label)
+    plt.plot(x, intercept + slope * x, color = color, linestyle = '--')
+    plt.fill_between(x, intercept + slope_conf_interval[0] * x, intercept + slope_conf_interval[1] * x, color=color, alpha=0.1)
+
 
 #%%
-IPSL_CM5_calendar = calendar_years(IPSL_CM5_year, 1990)
-IPSL_CM6_calendar = calendar_years(IPSL_CM6_year, 1990)
-MPI_ESM_calendar = calendar_years(MPI_ESM_year, 1850)
-TRACE_calendar = calendar_years(TRACE_year, 1950)
+IPSL_CM5_calendar = np.array(calendar_years(IPSL_CM5_year, 1990))
+IPSL_CM6_calendar = np.array(calendar_years(IPSL_CM6_year, 1990))
+MPI_ESM_calendar = np.array(calendar_years(MPI_ESM_year, 1850))
+TRACE_calendar = np.array(calendar_years(TRACE_year, 1950))
 
 
 #%%
 from matplotlib import pyplot as plt
+import numpy as np
+import scipy.stats as stats
 
+#%%
 colors = { 'IPSL_CM5': 'red',
                 'IPSL_CM6': 'orange',
                 'MPI_ESM': 'green',                 
                 'TRACE': 'blue'}
 
 fig, ax = plt.subplots()
+ci = 0.99
 
-ax.plot(IPSL_CM5_calendar, IPSL_CM5_gradient, label = 'IPSL_CM5', color = colors['IPSL_CM5'])
-ax.plot(IPSL_CM6_calendar, IPSL_CM6_gradient, label = 'IPSL_CM6', color = colors['IPSL_CM6'])
-ax.plot(MPI_ESM_calendar, MPI_ESM_gradient, label = 'MPI_ESM', color = colors['MPI_ESM'])
-ax.plot(TRACE_calendar, TRACE_gradient, label = 'TRACE', color = colors['TRACE'])
+plot_with_ci(IPSL_CM5_calendar, IPSL_CM5_gradient, label = 'IPSL_CM5', color = colors['IPSL_CM5'], ax = ax, ci = ci)
+plot_with_ci(IPSL_CM6_calendar, IPSL_CM6_gradient, label = 'IPSL_CM6', color = colors['IPSL_CM6'], ax = ax, ci = ci)
+plot_with_ci(MPI_ESM_calendar, MPI_ESM_gradient, label = 'MPI_ESM', color = colors['MPI_ESM'], ax = ax, ci = ci)
+plot_with_ci(TRACE_calendar, TRACE_gradient, label = 'TRACE', color = colors['TRACE'], ax = ax, ci = ci)
 
 ax.set_xlabel('Year')
 ax.set_ylabel('SST Gradient (K)')
